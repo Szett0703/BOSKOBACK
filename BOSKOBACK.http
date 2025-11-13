@@ -1,0 +1,6 @@
+@BOSKOBACK_HostAddress = http://localhost:5271
+
+GET {{BOSKOBACK_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
