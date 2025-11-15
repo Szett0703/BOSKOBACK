@@ -48,50 +48,6 @@ namespace BOSKOBACK.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Description = "Fashion for Men",
-                            ImageUrl = "https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=400&h=300&fit=crop",
-                            Name = "Men"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Description = "Fashion for Women",
-                            ImageUrl = "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=300&fit=crop",
-                            Name = "Women"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Description = "Fashion for Kids",
-                            ImageUrl = "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=400&h=300&fit=crop",
-                            Name = "Kids"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Description = "Fashion Accessories",
-                            ImageUrl = "https://images.unsplash.com/photo-1523779917675-b6ed3a42a561?w=400&h=300&fit=crop",
-                            Name = "Accessories"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Description = "Footwear Collection",
-                            ImageUrl = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop",
-                            Name = "Shoes"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Description = "Sports & Active Wear",
-                            ImageUrl = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop",
-                            Name = "Sports"
-                        });
                 });
 
             modelBuilder.Entity("BOSKOBACK.Models.Order", b =>
@@ -185,80 +141,6 @@ namespace BOSKOBACK.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Products");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CategoryId = 1,
-                            Description = "Stay warm in style with our premium winter jacket",
-                            ImageUrl = "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=500&fit=crop",
-                            Name = "Classic Winter Jacket",
-                            Price = 129.99m
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CategoryId = 2,
-                            Description = "Perfect for any summer occasion",
-                            ImageUrl = "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=500&fit=crop",
-                            Name = "Elegant Summer Dress",
-                            Price = 89.99m
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CategoryId = 5,
-                            Description = "Comfortable and stylish everyday wear",
-                            ImageUrl = "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=500&fit=crop",
-                            Name = "Designer Sneakers",
-                            Price = 149.99m
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CategoryId = 4,
-                            Description = "Timeless elegance for your wrist",
-                            ImageUrl = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=500&fit=crop",
-                            Name = "Luxury Watch",
-                            Price = 299.99m
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CategoryId = 3,
-                            Description = "Comfortable cotton t-shirt for active kids",
-                            ImageUrl = "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=400&h=500&fit=crop",
-                            Name = "Kids Casual T-Shirt",
-                            Price = 24.99m
-                        },
-                        new
-                        {
-                            Id = 6,
-                            CategoryId = 6,
-                            Description = "High-performance running shoes",
-                            ImageUrl = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=500&fit=crop",
-                            Name = "Sports Running Shoes",
-                            Price = 119.99m
-                        },
-                        new
-                        {
-                            Id = 7,
-                            CategoryId = 4,
-                            Description = "Elegant leather handbag for any occasion",
-                            ImageUrl = "https://images.unsplash.com/photo-1564422170194-896b89110ef8?w=400&h=500&fit=crop",
-                            Name = "Leather Handbag",
-                            Price = 179.99m
-                        },
-                        new
-                        {
-                            Id = 8,
-                            CategoryId = 1,
-                            Description = "Classic fit denim jeans",
-                            ImageUrl = "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=500&fit=crop",
-                            Name = "Denim Jeans",
-                            Price = 79.99m
-                        });
                 });
 
             modelBuilder.Entity("BOSKOBACK.Models.User", b =>

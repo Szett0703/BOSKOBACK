@@ -51,12 +51,18 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure CORS to allow Angular app
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularClient",
-        policy => policy.WithOrigins("http://localhost:4200")
-                        .AllowAnyHeader()
-                        .AllowAnyMethod());
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:4300", "http://localhost:4200")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
 });
 
 // JWT Authentication configuration
@@ -87,8 +93,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Use CORS
-app.UseCors("AllowAngularClient");
+// Use CORS - DEBE estar antes de UseAuthentication y UseAuthorization
+app.UseCors(MyAllowSpecificOrigins);
 
 // Swagger middleware
 if (app.Environment.IsDevelopment())

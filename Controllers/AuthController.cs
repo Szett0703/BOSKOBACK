@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -36,7 +37,8 @@ namespace BOSKOBACK.Controllers
             {
                 Name = dto.Name,
                 Email = dto.Email,
-                Provider = "Local"
+                Provider = "Local",
+                RoleId = 3 // Customer by default
             };
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
@@ -44,13 +46,24 @@ namespace BOSKOBACK.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Usuario registrado exitosamente." });
+            // Load role for token generation
+            await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+            var token = GenerateJwtToken(user);
+            return Ok(new
+            {
+                token,
+                user = new { id = user.Id, name = user.Name, email = user.Email, role = user.Role.Name }
+            });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == dto.Email);
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .SingleOrDefaultAsync(u => u.Email == dto.Email);
+
             if (user == null)
             {
                 return Unauthorized(new { message = "Credenciales inválidas." });
@@ -76,7 +89,7 @@ namespace BOSKOBACK.Controllers
             return Ok(new
             {
                 token,
-                user = new { id = user.Id, name = user.Name, email = user.Email }
+                user = new { id = user.Id, name = user.Name, email = user.Email, role = user.Role.Name }
             });
         }
 
@@ -96,7 +109,10 @@ namespace BOSKOBACK.Controllers
             string googleEmail = payload.Email;
             string name = payload.Name ?? payload.Email;
 
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == googleEmail);
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .SingleOrDefaultAsync(u => u.Email == googleEmail);
+
             if (user == null)
             {
                 user = new User
@@ -104,17 +120,19 @@ namespace BOSKOBACK.Controllers
                     Name = name,
                     Email = googleEmail,
                     Provider = "Google",
-                    PasswordHash = null
+                    PasswordHash = null,
+                    RoleId = 3 // Customer by default
                 };
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
+                await _context.Entry(user).Reference(u => u.Role).LoadAsync();
             }
 
             var token = GenerateJwtToken(user);
             return Ok(new
             {
                 token,
-                user = new { id = user.Id, name = user.Name, email = user.Email }
+                user = new { id = user.Id, name = user.Name, email = user.Email, role = user.Role.Name }
             });
         }
 
@@ -160,6 +178,34 @@ namespace BOSKOBACK.Controllers
             return Ok(new { message = "Contraseña restablecida exitosamente." });
         }
 
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (userId == 0)
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+            {
+                return BadRequest(new { message = "No se puede cambiar la contraseña." });
+            }
+
+            bool validPass = BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.PasswordHash);
+            if (!validPass)
+            {
+                return BadRequest(new { message = "Contraseña actual incorrecta." });
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Contraseña actualizada exitosamente." });
+        }
+
         private string GenerateJwtToken(User user)
         {
             var jwtSettings = _config.GetSection("Jwt");
@@ -169,10 +215,10 @@ namespace BOSKOBACK.Controllers
 
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("name", user.Name)
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.Name),
+                new Claim(ClaimTypes.Role, user.Role.Name)
             };
 
             var token = new JwtSecurityToken(

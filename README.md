@@ -1,96 +1,175 @@
-# Bosko Backend API - ASP.NET Core 8.0
+# BOSKOBACK - Backend completo con Roles, Permisos y Gestión Integral
 
-Backend API completo para la aplicación de e-commerce Bosko, construido con ASP.NET Core 8.0, Entity Framework Core y SQL Server.
+Backend ASP.NET Core 8 + EF Core con funcionalidades completas de e-commerce:
+- Autenticación JWT (registro, login, recuperación de contraseña, Google OAuth)
+- Autorización basada en roles (Admin, Employee, Customer)
+- CRUD completo de productos y categorías (solo Admin)
+- Gestión de pedidos con permisos por rol
+- Gestión de usuarios (solo Admin)
+- Sistema de reseñas de productos
+- Lista de deseos (Wishlist)
+- Gestión de direcciones de envío
 
-## ?? Características
+## ?? INICIO RÁPIDO
 
-- ? Autenticación JWT (JSON Web Tokens)
-- ? Registro y Login de usuarios tradicional
-- ? Autenticación con Google OAuth
-- ? Recuperación de contraseña
-- ? Gestión de productos y categorías
-- ? Sistema de pedidos (orders) completo
-- ? CORS configurado para Angular frontend
-- ? Documentación Swagger/OpenAPI
-- ? Base de datos con datos iniciales (seed data)
+### URLs del Backend
+- **HTTP**: `http://localhost:5000`
+- **HTTPS**: `https://localhost:5001`
+- **Swagger**: `http://localhost:5000/swagger`
 
-## ?? Prerrequisitos
+### Arrancar el Backend
+```bash
+# 1. Aplicar migraciones (primera vez)
+dotnet ef database update
 
-- .NET 8.0 SDK
-- SQL Server (LocalDB, Express, o Full)
-- Visual Studio 2022 o VS Code (opcional)
+# 2. Poblar datos de prueba (primera vez)
+sqlcmd -S LOCALHOST\SQLEXPRESS -d BOSKO -i SeedData.sql
 
-## ?? Configuración
+# 3. Iniciar API
+dotnet run
+```
+
+### Verificar que Funciona
+```bash
+# Abrir Swagger
+http://localhost:5000/swagger
+
+# O probar endpoint
+curl http://localhost:5000/api/categories
+```
+
+## ?? Requisitos
+
+- .NET 8 SDK
+- SQL Server (Express, LocalDB o Full)
+- Conexión configurada en `appsettings.json`
+
+## ??? Modelo de Datos
+
+### Entidades principales:
+- **Role**: roles del sistema (Admin, Employee, Customer)
+- **User**: usuarios con relación a rol
+- **Product**: productos del catálogo
+- **Category**: categorías de productos
+- **Order**: pedidos de clientes
+- **OrderItem**: items de cada pedido
+- **Address**: direcciones de envío de usuarios
+- **Review**: reseñas de productos
+- **WishlistItem**: lista de deseos de usuarios
+
+### Relaciones:
+- User ? Role (many-to-one)
+- User ? Orders (one-to-many, NO CASCADE para preservar histórico)
+- User ? Addresses (one-to-many, CASCADE)
+- User ? Reviews (one-to-many, CASCADE)
+- User ? WishlistItems (one-to-many, CASCADE)
+- Product ? Category (many-to-one, RESTRICT para evitar borrados accidentales)
+- Product ? Reviews (one-to-many, CASCADE)
+- Product ? WishlistItems (one-to-many, CASCADE)
+- Order ? OrderItems (one-to-many, CASCADE)
+- OrderItem ? Product (many-to-one, RESTRICT para preservar histórico)
+
+## ?? Configuración Inicial
 
 ### 1. Cadena de Conexión
 
-La cadena de conexión en `appsettings.json` está configurada para SQL Server Express:
+Actualiza `appsettings.json`:
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=LOCALHOST\\SQLEXPRESS;Database=BOSKO;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;"
+  "DefaultConnection": "Server=LOCALHOST\\SQLEXPRESS;Database=BOSKO;Trusted_Connection=True;TrustServerCertificate=True;"
 }
 ```
 
-**Ajusta el servidor según tu entorno:**
-- SQL Server Express: `LOCALHOST\\SQLEXPRESS`
-- SQL Server LocalDB: `(localdb)\\mssqllocaldb`
-- SQL Server Full: `localhost` o tu servidor
+### 2. JWT Configuration
 
-### 2. JWT Secret Key
-
-En producción, cambia la clave secreta en `appsettings.json`:
+En `appsettings.json`:
 
 ```json
 "Jwt": {
-  "Key": "TuClaveSecretaSuperSeguraYLargaAqui",
+  "Key": "TuClaveSecretaSuperSeguraYLargaDe32CaracteresOMas",
   "Issuer": "BoskoAPI",
-  "Audience": "BoskoAPIUsers",
+  "Audience": "BoskoApp",
   "ExpireMinutes": 1440
 }
 ```
 
-### 3. Migración y Base de Datos
-
-La base de datos ya ha sido creada con el comando:
+### 3. Aplicar Migraciones
 
 ```bash
+# Crear/actualizar base de datos
 dotnet ef database update
 ```
 
-Si necesitas recrear la base de datos:
+Esto creará:
+- Todas las tablas necesarias
+- Roles por defecto: Admin (1), Employee (2), Customer (3)
+
+### 4. Poblar con Datos de Prueba
+
+Ejecuta el script `SeedData.sql` en SQL Server Management Studio o con sqlcmd:
 
 ```bash
-# Eliminar la base de datos
-dotnet ef database drop
-
-# Actualizar/Crear base de datos
-dotnet ef database update
+sqlcmd -S LOCALHOST\SQLEXPRESS -d BOSKO -i SeedData.sql
 ```
 
-## ?? Ejecutar la Aplicación
+Este script crea:
+- Usuario Admin (admin@bosko.com / Admin123)
+- Usuarios de prueba (employee@bosko.com, customer@bosko.com / Password123)
+- 6 categorías
+- 10 productos
+- Pedidos de ejemplo
+- Reseñas
+- Direcciones
+- Items en wishlist
+
+### 5. Ejecutar la API
 
 ```bash
 dotnet run
 ```
 
-La API estará disponible en:
-- HTTPS: `https://localhost:7xxx`
-- HTTP: `http://localhost:5xxx`
+Accede a Swagger: `http://localhost:5000/swagger`
 
-(Los puertos pueden variar, revisa la consola)
+## ?? CORS y Frontend
 
-## ?? Documentación API (Swagger)
-
-Una vez ejecutada la aplicación, accede a Swagger en:
-
+El backend está configurado para aceptar peticiones desde:
 ```
-https://localhost:7xxx/swagger
+http://localhost:4200
 ```
 
-## ?? Endpoints de Autenticación
+Si tu frontend Angular corre en otro puerto, actualiza en `Program.cs`:
+```csharp
+policy => policy.WithOrigins("http://localhost:XXXX")
+```
 
-### Registro de Usuario
+## ?? Autenticación y Autorización
+
+### Roles del Sistema
+
+1. **Admin**: acceso completo
+   - Gestión de productos y categorías (CRUD)
+   - Gestión de usuarios (CRUD)
+   - Ver y gestionar todos los pedidos
+   - Moderar reseñas
+
+2. **Employee**: gestión operativa
+   - Ver todos los pedidos
+   - Actualizar estado de pedidos
+   - NO puede crear/editar productos ni gestionar usuarios
+
+3. **Customer**: usuario final
+   - Registro y login
+   - Ver productos y categorías
+   - Crear pedidos
+   - Gestionar sus direcciones
+   - Crear reseñas
+   - Gestionar su wishlist
+   - Ver solo sus propios pedidos
+
+### Endpoints de Autenticación
+
+#### Registro
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -101,90 +180,150 @@ Content-Type: application/json
   "password": "Password123"
 }
 ```
+? Retorna token JWT automáticamente. Asigna rol Customer por defecto.
 
-### Login
+#### Login
 ```http
 POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "juan@example.com",
-  "password": "Password123"
+  "email": "admin@bosko.com",
+  "password": "Admin123"
 }
 ```
+? Retorna token JWT con claim de rol incluido.
 
-**Respuesta:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "name": "Juan Pérez",
-    "email": "juan@example.com"
-  }
-}
-```
-
-### Login con Google
+#### Login con Google
 ```http
 POST /api/auth/google-login
 Content-Type: application/json
 
 {
-  "idToken": "TOKEN_DE_GOOGLE_AQUI"
+  "idToken": "GOOGLE_ID_TOKEN"
 }
 ```
 
-### Recuperar Contraseña
+#### Recuperar Contraseña
 ```http
 POST /api/auth/forgot-password
 Content-Type: application/json
 
 {
-  "email": "juan@example.com"
+  "email": "usuario@example.com"
 }
 ```
+? Genera token de reset válido por 1 hora. (En dev se imprime en consola)
 
-### Resetear Contraseña
 ```http
 POST /api/auth/reset-password
 Content-Type: application/json
 
 {
-  "email": "juan@example.com",
-  "token": "GUID_TOKEN",
-  "newPassword": "NewPassword123"
+  "email": "usuario@example.com",
+  "token": "GUID-TOKEN",
+  "newPassword": "NuevaPassword123"
 }
 ```
 
-## ??? Endpoints de Productos
+#### Cambiar Contraseña (autenticado)
+```http
+POST /api/auth/change-password
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
 
-### Listar Productos
+{
+  "oldPassword": "Password123",
+  "newPassword": "NuevaPassword456"
+}
+```
+
+## ?? Endpoints de Productos
+
+### Listar productos (público)
 ```http
 GET /api/products
 GET /api/products?categoryId=1
+GET /api/products?search=zapato
+GET /api/products?categoryId=2&search=verano
 ```
 
-### Obtener Producto por ID
+### Obtener producto (público)
 ```http
-GET /api/products/1
+GET /api/products/{id}
 ```
 
-## ?? Endpoints de Categorías
+### Crear producto (Admin)
+```http
+POST /api/products
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
 
-### Listar Categorías
+{
+  "name": "Producto Nuevo",
+  "description": "Descripción detallada",
+  "price": 99.99,
+  "imageUrl": "https://example.com/image.jpg",
+  "categoryId": 1
+}
+```
+
+### Actualizar producto (Admin)
+```http
+PUT /api/products/{id}
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "name": "Producto Actualizado",
+  "description": "Nueva descripción",
+  "price": 109.99,
+  "imageUrl": "https://example.com/new-image.jpg",
+  "categoryId": 1
+}
+```
+
+### Eliminar producto (Admin)
+```http
+DELETE /api/products/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
+?? No permite borrar si tiene pedidos asociados.
+
+## ??? Endpoints de Categorías
+
+### Listar categorías (público)
 ```http
 GET /api/categories
 ```
 
-### Obtener Categoría por ID
+### Crear categoría (Admin)
 ```http
-GET /api/categories/1
+POST /api/categories
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "name": "Nueva Categoría",
+  "description": "Descripción",
+  "imageUrl": "https://example.com/cat.jpg"
+}
 ```
 
-## ?? Endpoints de Pedidos (Requiere Autenticación)
+### Actualizar categoría (Admin)
+```http
+PUT /api/categories/{id}
+```
 
-### Crear Pedido
+### Eliminar categoría (Admin)
+```http
+DELETE /api/categories/{id}
+```
+?? No permite borrar si tiene productos asociados.
+
+## ?? Endpoints de Pedidos
+
+### Crear pedido (checkout)
 ```http
 POST /api/orders
 Authorization: Bearer {JWT_TOKEN}
@@ -201,159 +340,270 @@ Content-Type: application/json
   }
 ]
 ```
+? Recalcula precios desde DB. Aplica 10% de impuesto. Status inicial: "Pending".
 
-### Obtener Mis Pedidos
+### Listar pedidos
 ```http
 GET /api/orders
+GET /api/orders?status=Pending
+Authorization: Bearer {JWT_TOKEN}
+```
+- **Customer**: ve solo sus pedidos
+- **Admin/Employee**: ven todos los pedidos
+
+### Ver detalle de pedido
+```http
+GET /api/orders/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
+- **Customer**: solo si es el propietario
+- **Admin/Employee**: cualquier pedido
+
+### Actualizar estado de pedido (Admin/Employee)
+```http
+PUT /api/orders/{id}
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "status": "Shipped"
+}
+```
+Estados comunes: Pending, Processing, Shipped, Completed, Cancelled
+
+## ?? Endpoints de Usuarios (Admin)
+
+### Listar usuarios
+```http
+GET /api/users
 Authorization: Bearer {JWT_TOKEN}
 ```
 
-### Obtener Pedido por ID
+### Crear usuario
 ```http
-GET /api/orders/1
+POST /api/users
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "name": "Nuevo Empleado",
+  "email": "empleado@bosko.com",
+  "password": "Password123",
+  "roleName": "Employee"
+}
+```
+? Si no se proporciona password, se genera uno aleatorio.
+
+### Actualizar usuario
+```http
+PUT /api/users/{id}
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "name": "Nombre Actualizado",
+  "email": "nuevo@email.com",
+  "roleName": "Admin"
+}
+```
+
+### Eliminar usuario
+```http
+DELETE /api/users/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
+?? No permite borrar si tiene pedidos (preserva histórico).
+
+## ? Endpoints de Reseñas
+
+### Ver reseñas de un producto (público)
+```http
+GET /api/products/{id}/reviews
+```
+
+### Crear reseña (Customer)
+```http
+POST /api/products/{id}/reviews
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Excelente producto, muy recomendado"
+}
+```
+?? Un usuario solo puede reseñar un producto una vez.
+
+### Actualizar reseña
+```http
+PUT /api/reviews/{id}
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Comentario actualizado"
+}
+```
+? Solo el autor o Admin.
+
+### Eliminar reseña
+```http
+DELETE /api/reviews/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
+? Solo el autor o Admin (moderación).
+
+## ?? Endpoints de Wishlist
+
+### Ver mi wishlist
+```http
+GET /api/wishlist
 Authorization: Bearer {JWT_TOKEN}
 ```
 
-## ?? Autenticación JWT
-
-Para endpoints protegidos, incluye el token JWT en el header:
-
+### Agregar a wishlist
 ```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+POST /api/wishlist/{productId}
+Authorization: Bearer {JWT_TOKEN}
 ```
 
-En Swagger, usa el botón "Authorize" e ingresa: `Bearer {tu_token}`
-
-## ?? Datos Iniciales
-
-La base de datos incluye:
-
-### Categorías (6):
-1. Men - Fashion for Men
-2. Women - Fashion for Women
-3. Kids - Fashion for Kids
-4. Accessories - Fashion Accessories
-5. Shoes - Footwear Collection
-6. Sports - Sports & Active Wear
-
-### Productos (8):
-1. Classic Winter Jacket - $129.99
-2. Elegant Summer Dress - $89.99
-3. Designer Sneakers - $149.99
-4. Luxury Watch - $299.99
-5. Kids Casual T-Shirt - $24.99
-6. Sports Running Shoes - $119.99
-7. Leather Handbag - $179.99
-8. Denim Jeans - $79.99
-
-## ?? CORS
-
-El CORS está configurado para permitir requests desde:
-```
-http://localhost:4200
+### Eliminar de wishlist
+```http
+DELETE /api/wishlist/{productId}
+Authorization: Bearer {JWT_TOKEN}
 ```
 
-Para producción, actualiza en `Program.cs`:
-```csharp
-policy => policy.WithOrigins("https://tu-dominio.com")
+## ?? Endpoints de Direcciones
+
+### Listar mis direcciones
+```http
+GET /api/addresses
+Authorization: Bearer {JWT_TOKEN}
 ```
 
-## ?? Estructura del Proyecto
+### Crear dirección
+```http
+POST /api/addresses
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
 
-```
-BOSKOBACK/
-??? Controllers/
-?   ??? AuthController.cs       # Autenticación y autorización
-?   ??? ProductsController.cs   # Gestión de productos
-?   ??? CategoriesController.cs # Gestión de categorías
-?   ??? OrdersController.cs     # Gestión de pedidos
-??? Data/
-?   ??? BoskoDbContext.cs       # Contexto de Entity Framework
-??? DTOs/
-?   ??? AuthDTOs.cs             # DTOs de autenticación
-?   ??? ProductDto.cs           # DTOs de productos
-?   ??? CategoryDto.cs          # DTOs de categorías
-?   ??? OrderDTOs.cs            # DTOs de pedidos
-??? Models/
-?   ??? User.cs                 # Modelo de usuario
-?   ??? Product.cs              # Modelo de producto
-?   ??? Category.cs             # Modelo de categoría
-?   ??? Order.cs                # Modelo de pedido
-?   ??? OrderItem.cs            # Modelo de item de pedido
-??? Migrations/                 # Migraciones de EF Core
-??? Program.cs                  # Configuración principal
-??? appsettings.json           # Configuración de la aplicación
+{
+  "street": "Calle Principal 123",
+  "city": "Madrid",
+  "state": "Madrid",
+  "postalCode": "28001",
+  "country": "España"
+}
 ```
 
-## ??? Tecnologías Utilizadas
+### Actualizar dirección
+```http
+PUT /api/addresses/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
 
-- ASP.NET Core 8.0
-- Entity Framework Core 8.0
-- SQL Server
-- JWT Bearer Authentication
-- BCrypt.Net (para hash de contraseñas)
-- Google.Apis.Auth (para autenticación con Google)
-- Swagger/Swashbuckle (documentación API)
+### Eliminar dirección
+```http
+DELETE /api/addresses/{id}
+Authorization: Bearer {JWT_TOKEN}
+```
+? Solo el propietario.
 
-## ?? Notas de Seguridad
+## ?? Pruebas con Postman
 
-1. **JWT Secret**: Cambiar la clave secreta en producción y almacenarla en variables de entorno
-2. **CORS**: Restringir orígenes permitidos en producción
-3. **HTTPS**: Usar siempre HTTPS en producción
-4. **Contraseñas**: Las contraseñas se hashean con BCrypt antes de almacenarlas
-5. **Tokens de Reset**: Los tokens de recuperación expiran en 1 hora
+### 1. Login como Admin
+```json
+POST /api/auth/login
+{
+  "email": "admin@bosko.com",
+  "password": "Admin123"
+}
+```
+Copia el token recibido.
+
+### 2. Autorización en Postman
+En cada request protegido:
+- Tab "Authorization"
+- Type: "Bearer Token"
+- Token: [pega el JWT]
+
+### 3. Probar flujos por rol
+
+**Como Admin:**
+- Crear producto ?
+- Crear categoría ?
+- Ver todos los pedidos ?
+- Gestionar usuarios ?
+
+**Como Customer (customer@bosko.com / Password123):**
+- Crear producto ? (403 Forbidden)
+- Ver solo sus pedidos ?
+- Crear reseña ?
+- Gestionar wishlist ?
+
+**Como Employee (employee@bosko.com / Password123):**
+- Ver todos los pedidos ?
+- Actualizar estado de pedido ?
+- Crear producto ? (403)
+
+## ?? Seguridad
+
+- Contraseñas hasheadas con BCrypt (salt automático)
+- JWT con claims de rol para autorización
+- Tokens de reset de contraseña expiran en 1 hora
+- Validación de propiedad en endpoints sensibles
+- Prevent cascade delete en relaciones con histórico
 
 ## ?? Troubleshooting
 
-### Error de Conexión a SQL Server
+### Error de conexión a SQL Server
+- Verifica que SQL Server esté corriendo
+- Ajusta el nombre del servidor en la cadena de conexión
+- Para LocalDB: `(localdb)\\mssqllocaldb`
 
-Si tienes problemas conectando a SQL Server:
+### 403 Forbidden
+- Verifica que el token sea válido y no haya expirado
+- Asegúrate de incluir "Bearer " antes del token
+- Verifica que tu rol tenga permisos para ese endpoint
 
-1. Verifica que SQL Server esté corriendo
-2. Ajusta la cadena de conexión en `appsettings.json`
-3. Para SQL Server Express: usa `LOCALHOST\\SQLEXPRESS`
-4. Para LocalDB: usa `(localdb)\\mssqllocaldb`
+### Frontend no conecta (ERR_CONNECTION_REFUSED)
+- ? Verifica que el backend esté corriendo: `dotnet run`
+- ? Verifica que el puerto sea 5000: `http://localhost:5000/swagger`
+- ? Verifica CORS en `Program.cs` para tu puerto de frontend
 
-### Error de CORS
+### Migraciones pendientes
+```bash
+dotnet ef database update
+```
 
-Si el frontend no puede conectarse:
+## ?? Swagger
 
-1. Verifica que el origen esté permitido en `Program.cs`
-2. Asegúrate que el frontend corra en `http://localhost:4200`
+Accede a `/swagger` en desarrollo: `http://localhost:5000/swagger`
 
-### Error de JWT Inválido
+Para usar endpoints protegidos:
+1. Haz login y copia el token
+2. Click en "Authorize" (candado)
+3. Ingresa: `Bearer {tu-token}`
 
-1. Verifica que el token no haya expirado (24 horas por defecto)
-2. Asegúrate de incluir "Bearer " antes del token
-3. Verifica que la clave secreta sea la misma
+## ?? Próximas Mejoras
 
-## ?? Recuperación de Contraseña
+- [ ] Envío real de emails (SMTP/SendGrid)
+- [ ] Paginación en listados grandes
+- [ ] Rate limiting
+- [ ] Logging estructurado (Serilog)
+- [ ] Tests unitarios e integración
+- [ ] Caché con Redis
+- [ ] Refresh tokens
+- [ ] Gestión de inventario (stock)
 
-?? **Nota**: El envío de emails está simulado. Los enlaces de recuperación se imprimen en la consola.
+## ?? Documentación Adicional
 
-Para implementar envío real de emails:
-
-1. Instala un paquete SMTP (ej: `MailKit`)
-2. Configura credenciales SMTP en `appsettings.json`
-3. Implementa el envío en `AuthController.ForgotPassword`
-
-## ?? Próximos Pasos
-
-Para producción considera:
-
-1. Implementar refresh tokens
-2. Agregar rate limiting
-3. Implementar logging (Serilog, NLog)
-4. Agregar validaciones adicionales
-5. Implementar paginación en listas
-6. Agregar caché (Redis)
-7. Implementar envío real de emails
-8. Agregar pruebas unitarias e integración
+- `QUICK_START.md` - Guía de inicio rápido
+- `POSTMAN_GUIDE.md` - Testing exhaustivo
+- `DEPLOYMENT_GUIDE.md` - Despliegue a producción
+- `FIX_CONNECTION_ERROR.md` - Solución a errores de conexión
 
 ## ?? Licencia
 
-Este proyecto fue creado para la aplicación Bosko.
-
-## ????? Autor
-
-Desarrollado como backend para la aplicación de e-commerce Bosko.
+Proyecto desarrollado para Bosko E-Commerce.
