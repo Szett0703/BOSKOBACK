@@ -11,25 +11,25 @@ namespace DBTest_BACK.Models
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(100)]
+        [MaxLength(150)]  // Actualizado para coincidir con DB: nvarchar(150)
         public string Name { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(255)]
+        [MaxLength(150)]  // Actualizado para coincidir con DB: nvarchar(150)
         public string Email { get; set; } = string.Empty;
 
         [MaxLength(255)]
         public string? PasswordHash { get; set; } // Null para usuarios de Google
 
-        [MaxLength(20)]
+        [MaxLength(50)]  // Actualizado para coincidir con DB: nvarchar(50)
         public string? Phone { get; set; }
 
         [Required]
-        [MaxLength(20)]
+        [MaxLength(50)]  // Actualizado para coincidir con DB: nvarchar(50)
         public string Role { get; set; } = "Customer"; // Admin, Employee, Customer
 
         [Required]
-        [MaxLength(20)]
+        [MaxLength(50)]  // Actualizado para coincidir con DB: nvarchar(50)
         public string Provider { get; set; } = "Local"; // Local, Google
 
         [Required]
@@ -53,14 +53,14 @@ namespace DBTest_BACK.Models
         public int UserId { get; set; }
 
         [Required]
-        [MaxLength(500)]
+        [MaxLength(255)]  // Actualizado para coincidir con DB: nvarchar(255)
         public string Token { get; set; } = string.Empty;
 
         [Required]
         public DateTime ExpiresAt { get; set; }
 
         [Required]
-        public bool IsUsed { get; set; } = false;
+        public bool IsUsed { get; set; } = false;  // Agregar de vuelta
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

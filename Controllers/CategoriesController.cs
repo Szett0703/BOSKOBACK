@@ -18,135 +18,52 @@ namespace DBTest_BACK.Controllers
             _context = context;
         }
 
-        // GET: api/categories (Público)
+        // GET: api/categories (PÃºblico)
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
+        public async Task<ActionResult<IEnumerable<CategoryResponseDto>>> GetCategories()
         {
             var categories = await _context.Categories
-                .Select(c => new CategoryDto
+                .Include(c => c.Products)
+                .Select(c => new CategoryResponseDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Description = c.Description,
-                    Image = c.Image
+                    Image = c.Image,
+                    ProductCount = c.Products.Count,
+                    CreatedAt = c.CreatedAt
                 })
                 .ToListAsync();
 
             return Ok(categories);
         }
 
-        // GET: api/categories/5 (Público)
+        // GET: api/categories/5 (PÃºblico)
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
+        public async Task<ActionResult<CategoryResponseDto>> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+                .Include(c => c.Products)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (category == null)
             {
-                return NotFound(new { message = $"Categoría con Id {id} no encontrada" });
+                return NotFound(new { message = $"CategorÃ­a con Id {id} no encontrada" });
             }
 
-            var categoryDto = new CategoryDto
+            var categoryDto = new CategoryResponseDto
             {
                 Id = category.Id,
                 Name = category.Name,
                 Description = category.Description,
-                Image = category.Image
+                Image = category.Image,
+                ProductCount = category.Products.Count,
+                CreatedAt = category.CreatedAt
             };
 
             return Ok(categoryDto);
-        }
-
-        // POST: api/categories (Solo Admin)
-        [HttpPost]
-        [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<CategoryDto>> CreateCategory([FromBody] CategoryDto categoryDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var category = new Category
-            {
-                Name = categoryDto.Name,
-                Description = categoryDto.Description,
-                Image = categoryDto.Image,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
-
-            var result = new CategoryDto
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Description = category.Description,
-                Image = category.Image
-            };
-
-            return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, result);
-        }
-
-        // PUT: api/categories/5 (Solo Admin)
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryDto categoryDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return NotFound(new { message = $"Categoría con Id {id} no encontrada" });
-            }
-
-            category.Name = categoryDto.Name;
-            category.Description = categoryDto.Description;
-            category.Image = categoryDto.Image;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await CategoryExists(id))
-                {
-                    return NotFound();
-                }
-                throw;
-            }
-
-            return NoContent();
-        }
-
-        // DELETE: api/categories/5 (Solo Admin)
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteCategory(int id)
-        {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return NotFound(new { message = $"Categoría con Id {id} no encontrada" });
-            }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private async Task<bool> CategoryExists(int id)
-        {
-            return await _context.Categories.AnyAsync(e => e.Id == id);
         }
     }
 }

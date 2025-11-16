@@ -33,7 +33,16 @@ builder.WebHost.UseUrls("https://localhost:5006", "http://localhost:5005");
 // ============================================
 
 // Controllers y API
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Manejar referencias circulares
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Escribir JSON con indentación para mejor legibilidad
+        options.JsonSerializerOptions.WriteIndented = true;
+        // Ignorar propiedades nulas
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // Swagger con configuración de seguridad JWT
@@ -70,6 +79,13 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+
+    // Ignorar referencias circulares en Swagger
+    c.CustomSchemaIds(type => type.FullName);
+    
+    // Usar el comportamiento seguro para la generación de esquemas
+    c.UseAllOfToExtendReferenceSchemas();
+    c.UseAllOfForInheritance();
 });
 
 // Configurar DbContext con SQL Server
@@ -79,6 +95,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Registrar servicios
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+// ============================================
+// NUEVOS SERVICIOS DEL PANEL ADMIN
+// ============================================
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 
 // ============================================
 // AUTENTICACIÓN JWT
