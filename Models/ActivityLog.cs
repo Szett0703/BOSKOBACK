@@ -1,0 +1,24 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace DBTest_BACK.Models
+{
+    public class ActivityLog
+    {
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Type { get; set; } = string.Empty; // order, product, user, category
+
+        [Required]
+        [MaxLength(500)]
+        public string Text { get; set; } = string.Empty;
+
+        public int? UserId { get; set; }
+
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        // Relación
+        public User? User { get; set; }
+    }
+}
