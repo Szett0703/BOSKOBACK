@@ -24,6 +24,8 @@ namespace DBTest_BACK.Data
         public DbSet<ShippingAddress> ShippingAddresses { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserPreferences> UserPreferences { get; set; }
+        public DbSet<Address> Addresses { get; set; }
 
         // Tabla antigua (se mantiene para compatibilidad durante migración)
         public DbSet<Producto> Productos { get; set; }
@@ -371,6 +373,38 @@ namespace DBTest_BACK.Data
                 
                 entity.Property(e => e.FechaCreacion)
                     .IsRequired();
+            });
+
+            // ============================================
+            // CONFIGURACIÓN DE USERPREFERENCES
+            // ============================================
+            modelBuilder.Entity<UserPreferences>(entity =>
+            {
+                entity.ToTable("UserPreferences");
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.Notifications)
+                    .IsRequired();
+                
+                entity.Property(e => e.Newsletter)
+                    .IsRequired();
+                
+                entity.Property(e => e.Language)
+                    .HasMaxLength(10);
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                // Relación uno a uno con User
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.Preferences)
+                    .HasForeignKey<UserPreferences>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Índice único en UserId
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("UQ_UserPreferences_UserId");
             });
         }
     }

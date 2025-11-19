@@ -136,6 +136,47 @@ namespace DBTest_BACK.DTOs
         public string Message { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// DTO para actualizar dirección de envío y notas de un pedido
+    /// </summary>
+    public class UpdateOrderDto
+    {
+        public ShippingAddressUpdateDto ShippingAddress { get; set; } = new();
+        public string? Notes { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para actualizar dirección de envío
+    /// </summary>
+    public class ShippingAddressUpdateDto
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string Country { get; set; } = "México";
+    }
+
+    /// <summary>
+    /// DTO para cancelar un pedido
+    /// </summary>
+    public class CancelOrderDto
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Respuesta genérica para operaciones de pedidos
+    /// </summary>
+    public class OrderOperationResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public OrderDetailDto? Data { get; set; }
+    }
+
     // Top Products
     public class TopProductDto
     {

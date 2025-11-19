@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace DBTest_BACK.Models
 {
@@ -40,6 +41,19 @@ namespace DBTest_BACK.Models
 
         [Required]
         public bool IsActive { get; set; } = true;
+
+        [MaxLength(500)]
+        public string? AvatarUrl { get; set; }
+
+        // Navigation properties
+        [JsonIgnore]
+        public UserPreferences? Preferences { get; set; }
+        
+        [JsonIgnore]
+        public ICollection<Order> Orders { get; set; } = new List<Order>();
+        
+        [JsonIgnore]
+        public ICollection<Address> Addresses { get; set; } = new List<Address>();
     }
 
     [Table("PasswordResetTokens")]

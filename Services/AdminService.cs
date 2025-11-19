@@ -18,6 +18,8 @@ namespace DBTest_BACK.Services
         Task<PagedResult<OrderDto>> GetOrdersAsync(int page, int limit, string? status, string? search);
         Task<OrderDetailDto?> GetOrderByIdAsync(int id);
         Task<bool> UpdateOrderStatusAsync(int id, string status, string? note);
+        Task<OrderOperationResult> UpdateOrderAsync(int id, UpdateOrderDto dto);
+        Task<OrderOperationResult> CancelOrderAsync(int id, string reason);
         
         Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int limit, string? role, string? search);
         Task<bool> UpdateUserRoleAsync(int id, string role);
@@ -298,67 +300,94 @@ namespace DBTest_BACK.Services
 
         public async Task<OrderDetailDto?> GetOrderByIdAsync(int id)
         {
-            var order = await _context.Orders
-                .Include(o => o.Customer)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.Product)
-                .Include(o => o.StatusHistory)
-                .FirstOrDefaultAsync(o => o.Id == id);
-
-            if (order == null)
-                return null;
-
-            // Parse shipping address (format: "Calle Principal 123, Madrid, Madrid, 28001, España")
-            var addressParts = order.ShippingAddress.Split(',').Select(p => p.Trim()).ToArray();
-            var shippingAddress = new ShippingAddressInfo
+            try
             {
-                Street = addressParts.Length > 0 ? addressParts[0] : "",
-                City = addressParts.Length > 1 ? addressParts[1] : "",
-                State = addressParts.Length > 2 ? addressParts[2] : "",
-                ZipCode = addressParts.Length > 3 ? addressParts[3] : "",
-                Country = addressParts.Length > 4 ? addressParts[4] : ""
-            };
+                var order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                        .ThenInclude(i => i.Product)
+                    .Include(o => o.ShippingAddressDetails)  // Agregar este Include
+                    .Include(o => o.StatusHistory)
+                    .FirstOrDefaultAsync(o => o.Id == id);
 
-            return new OrderDetailDto
-            {
-                Id = order.Id,
-                CustomerName = order.CustomerName,
-                CustomerEmail = order.CustomerEmail,
-                Items = order.Items.Count,
-                Amount = order.Total,
-                Status = order.Status,
-                CreatedAt = order.CreatedAt,
-                UpdatedAt = order.UpdatedAt,
-                Customer = new CustomerInfo
+                if (order == null)
+                    return null;
+
+                // Usar ShippingAddressDetails si existe, sino parsear el string legacy
+                ShippingAddressInfo shippingAddress;
+                
+                if (order.ShippingAddressDetails != null)
                 {
-                    Id = order.CustomerId,
-                    Name = order.CustomerName,
-                    Email = order.CustomerEmail,
-                    Phone = order.Customer?.Phone
-                },
-                ShippingAddress = shippingAddress,
-                OrderItems = order.Items.Select(i => new OrderItemDto
-                {
-                    ProductId = i.ProductId,
-                    Name = i.ProductName,
-                    Quantity = i.Quantity,
-                    Price = i.Price,
-                    Subtotal = i.Subtotal,
-                    ImageUrl = i.Product?.Image
-                }).ToList(),
-                Subtotal = order.Subtotal,
-                Shipping = order.Shipping,
-                Total = order.Total,
-                PaymentMethod = order.PaymentMethod,
-                StatusHistory = order.StatusHistory
-                    .OrderByDescending(h => h.Timestamp)
-                    .Select(h => new StatusHistoryDto
+                    // Nuevo sistema con tabla ShippingAddresses
+                    shippingAddress = new ShippingAddressInfo
                     {
-                        Status = h.Status,
-                        Timestamp = h.Timestamp,
-                        Note = h.Note
-                    }).ToList()
-            };
+                        Street = order.ShippingAddressDetails.Street,
+                        City = order.ShippingAddressDetails.City,
+                        State = order.ShippingAddressDetails.State,
+                        ZipCode = order.ShippingAddressDetails.PostalCode,
+                        Country = order.ShippingAddressDetails.Country
+                    };
+                }
+                else
+                {
+                    // Sistema legacy: parsear el string (compatibilidad con pedidos antiguos)
+                    var addressParts = order.ShippingAddress.Split(',').Select(p => p.Trim()).ToArray();
+                    shippingAddress = new ShippingAddressInfo
+                    {
+                        Street = addressParts.Length > 0 ? addressParts[0] : "",
+                        City = addressParts.Length > 1 ? addressParts[1] : "",
+                        State = addressParts.Length > 2 ? addressParts[2] : "",
+                        ZipCode = addressParts.Length > 3 ? addressParts[3] : "",
+                        Country = addressParts.Length > 4 ? addressParts[4] : ""
+                    };
+                }
+
+                return new OrderDetailDto
+                {
+                    Id = order.Id,
+                    CustomerName = order.CustomerName,
+                    CustomerEmail = order.CustomerEmail,
+                    Items = order.Items.Count,
+                    Amount = order.Total,
+                    Status = order.Status,
+                    CreatedAt = order.CreatedAt,
+                    UpdatedAt = order.UpdatedAt,
+                    Customer = new CustomerInfo
+                    {
+                        Id = order.CustomerId,
+                        Name = order.CustomerName,
+                        Email = order.CustomerEmail,
+                        Phone = order.Customer?.Phone
+                    },
+                    ShippingAddress = shippingAddress,
+                    OrderItems = order.Items.Select(i => new OrderItemDto
+                    {
+                        ProductId = i.ProductId,
+                        Name = i.ProductName,
+                        Quantity = i.Quantity,
+                        Price = i.Price,
+                        Subtotal = i.Subtotal,
+                        ImageUrl = i.Product?.Image
+                    }).ToList(),
+                    Subtotal = order.Subtotal,
+                    Shipping = order.Shipping,
+                    Total = order.Total,
+                    PaymentMethod = order.PaymentMethod,
+                    StatusHistory = order.StatusHistory
+                        .OrderByDescending(h => h.Timestamp)
+                        .Select(h => new StatusHistoryDto
+                        {
+                            Status = h.Status,
+                            Timestamp = h.Timestamp,
+                            Note = h.Note
+                        }).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo detalles del pedido {OrderId}", id);
+                throw; // Re-lanzar la excepción para que el controller la maneje
+            }
         }
 
         public async Task<bool> UpdateOrderStatusAsync(int id, string status, string? note)
@@ -394,6 +423,177 @@ namespace DBTest_BACK.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<OrderOperationResult> UpdateOrderAsync(int id, UpdateOrderDto dto)
+        {
+            try
+            {
+                var order = await _context.Orders
+                    .Include(o => o.ShippingAddressDetails)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
+                if (order == null)
+                {
+                    return new OrderOperationResult
+                    {
+                        Success = false,
+                        Message = "Pedido no encontrado"
+                    };
+                }
+
+                // Validar que el pedido esté en estado 'pending'
+                if (order.Status.ToLower() != "pending")
+                {
+                    return new OrderOperationResult
+                    {
+                        Success = false,
+                        Message = "No se puede editar un pedido que no está en estado 'pending'"
+                    };
+                }
+
+                // Actualizar dirección de envío
+                if (order.ShippingAddressDetails != null)
+                {
+                    order.ShippingAddressDetails.FullName = dto.ShippingAddress.FullName;
+                    order.ShippingAddressDetails.Phone = dto.ShippingAddress.Phone;
+                    order.ShippingAddressDetails.Street = dto.ShippingAddress.Street;
+                    order.ShippingAddressDetails.City = dto.ShippingAddress.City;
+                    order.ShippingAddressDetails.State = dto.ShippingAddress.State;
+                    order.ShippingAddressDetails.PostalCode = dto.ShippingAddress.PostalCode;
+                    order.ShippingAddressDetails.Country = dto.ShippingAddress.Country;
+                }
+
+                // Actualizar notas
+                if (!string.IsNullOrWhiteSpace(dto.Notes))
+                {
+                    order.Notes = dto.Notes;
+                }
+
+                // Actualizar timestamp
+                order.UpdatedAt = DateTime.UtcNow;
+
+                // Log activity
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Type = "order",
+                    Text = $"Pedido #{id} editado por administrador",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+
+                // Obtener el pedido actualizado con todos los detalles
+                var updatedOrder = await GetOrderByIdAsync(id);
+
+                return new OrderOperationResult
+                {
+                    Success = true,
+                    Message = "Pedido actualizado exitosamente",
+                    Data = updatedOrder
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error actualizando pedido {OrderId}", id);
+                return new OrderOperationResult
+                {
+                    Success = false,
+                    Message = $"Error al actualizar el pedido: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<OrderOperationResult> CancelOrderAsync(int id, string reason)
+        {
+            try
+            {
+                var order = await _context.Orders
+                    .Include(o => o.Items)
+                        .ThenInclude(i => i.Product)
+                    .Include(o => o.StatusHistory)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
+                if (order == null)
+                {
+                    return new OrderOperationResult
+                    {
+                        Success = false,
+                        Message = "Pedido no encontrado"
+                    };
+                }
+
+                // Validar que se puede cancelar
+                if (order.Status.ToLower() == "delivered")
+                {
+                    return new OrderOperationResult
+                    {
+                        Success = false,
+                        Message = "No se puede cancelar un pedido que ya fue entregado"
+                    };
+                }
+
+                if (order.Status.ToLower() == "cancelled")
+                {
+                    return new OrderOperationResult
+                    {
+                        Success = false,
+                        Message = "El pedido ya está cancelado"
+                    };
+                }
+
+                // Restaurar stock de productos
+                foreach (var item in order.Items)
+                {
+                    if (item.Product != null)
+                    {
+                        item.Product.Stock += item.Quantity;
+                        _logger.LogInformation("Stock restaurado: Producto {ProductId} +{Quantity} unidades", 
+                            item.ProductId, item.Quantity);
+                    }
+                }
+
+                // Actualizar estado a cancelado
+                order.Status = "cancelled";
+                order.UpdatedAt = DateTime.UtcNow;
+
+                // Registrar en historial
+                _context.OrderStatusHistory.Add(new OrderStatusHistory
+                {
+                    OrderId = id,
+                    Status = "cancelled",
+                    Note = $"Cancelado por administrador: {reason}",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                // Log activity
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Type = "order",
+                    Text = $"Pedido #{id} cancelado por administrador. Razón: {reason}",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Pedido {OrderId} cancelado exitosamente. Razón: {Reason}", id, reason);
+
+                return new OrderOperationResult
+                {
+                    Success = true,
+                    Message = "Pedido cancelado exitosamente"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelando pedido {OrderId}", id);
+                return new OrderOperationResult
+                {
+                    Success = false,
+                    Message = $"Error al cancelar el pedido: {ex.Message}"
+                };
+            }
         }
 
         public async Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int limit, string? role, string? search)

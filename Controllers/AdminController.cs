@@ -286,6 +286,100 @@ namespace DBTest_BACK.Controllers
             }
         }
 
+        /// <summary>
+        /// Actualiza la dirección de envío y notas de un pedido (solo estado 'pending').
+        /// </summary>
+        [HttpPut("orders/{id}")]
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new 
+                    { 
+                        error = "Datos de validación incorrectos",
+                        errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                    });
+                }
+
+                var result = await _adminService.UpdateOrderAsync(id, dto);
+                
+                if (!result.Success)
+                {
+                    if (result.Message.Contains("no encontrado"))
+                    {
+                        return NotFound(new { error = result.Message });
+                    }
+                    return BadRequest(new { error = result.Message });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Pedido actualizado exitosamente",
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order {OrderId}", id);
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cancela un pedido desde el panel de administración (solo estados 'pending' o 'processing').
+        /// </summary>
+        [HttpPost("orders/{id}/cancel")]
+        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new 
+                    { 
+                        error = "La razón de cancelación es obligatoria",
+                        errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    return BadRequest(new { error = "Debes proporcionar una razón para cancelar el pedido" });
+                }
+
+                if (dto.Reason.Length < 10)
+                {
+                    return BadRequest(new { error = "La razón debe tener al menos 10 caracteres" });
+                }
+
+                var result = await _adminService.CancelOrderAsync(id, dto.Reason);
+                
+                if (!result.Success)
+                {
+                    if (result.Message.Contains("no encontrado"))
+                    {
+                        return NotFound(new { error = result.Message });
+                    }
+                    return BadRequest(new { error = result.Message });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Pedido cancelado exitosamente",
+                    data = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling order {OrderId}", id);
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
+        }
+
         // ==================== USER MANAGEMENT ====================
         // NOTA: Los endpoints de gestión de usuarios se encuentran en AdminUsersController.cs
         // para evitar conflictos de rutas y mejorar la organización del código.
