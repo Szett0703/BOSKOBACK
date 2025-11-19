@@ -83,10 +83,13 @@ namespace DBTest_BACK.DTOs
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public string? Image { get; set; }
+        public int CategoryId { get; set; }
         public string? CategoryName { get; set; }
+        public DateTime CreatedAt { get; set; }
         public bool InStock => Stock > 0;
     }
 
@@ -156,6 +159,7 @@ namespace DBTest_BACK.DTOs
         public string Description { get; set; } = string.Empty;
         public string? Image { get; set; }
         public int ProductCount { get; set; }
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
     }
 
@@ -167,6 +171,15 @@ namespace DBTest_BACK.DTOs
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public int ProductCount { get; set; }
+    }
+
+    /// <summary>
+    /// DTO simple de categoría para dropdowns (solo ID y nombre)
+    /// </summary>
+    public class SimpleCategoryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     // ============================================
@@ -259,6 +272,8 @@ namespace DBTest_BACK.DTOs
         public string Message { get; set; } = string.Empty;
         public T? Data { get; set; }
         public List<string>? Errors { get; set; }
+        public string? Error { get; set; }
+        public string? StackTrace { get; set; }
 
         public static ApiResponse<T> SuccessResponse(T data, string message = "Operación exitosa")
         {
@@ -279,6 +294,17 @@ namespace DBTest_BACK.DTOs
                 Errors = errors
             };
         }
+
+        public static ApiResponse<T> ErrorResponse(string message, string? error, string? stackTrace = null)
+        {
+            return new ApiResponse<T>
+            {
+                Success = false,
+                Message = message,
+                Error = error,
+                StackTrace = stackTrace
+            };
+        }
     }
 
     /// <summary>
@@ -290,7 +316,8 @@ namespace DBTest_BACK.DTOs
         public int TotalCount { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }
-        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
         public bool HasPrevious => Page > 1;
         public bool HasNext => Page < TotalPages;
     }

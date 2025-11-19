@@ -182,7 +182,7 @@ namespace DBTest_BACK.Controllers
                 if (page < 1) page = 1;
 
                 var result = await _adminService.GetOrdersAsync(page, limit, status, search);
-                
+            
                 // Return response in the format expected by frontend
                 return Ok(new
                 {
@@ -245,7 +245,7 @@ namespace DBTest_BACK.Controllers
 
                 var validStatuses = new[] { "pending", "processing", "delivered", "cancelled" };
                 var statusLower = dto.Status.ToLower();
-                
+            
                 if (!validStatuses.Contains(statusLower))
                 {
                     return BadRequest(new 
@@ -286,97 +286,13 @@ namespace DBTest_BACK.Controllers
             }
         }
 
-        // ==================== USERS MANAGEMENT (Solo Admin) ====================
-
-        /// <summary>
-        /// Obtiene lista paginada de usuarios con filtros.
-        /// </summary>
-        [HttpGet("users")]
-        [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<PagedResult<AdminUserDto>>> GetUsers(
-            [FromQuery] int page = 1,
-            [FromQuery] int limit = 20,
-            [FromQuery] string? role = null,
-            [FromQuery] string? search = null)
-        {
-            try
-            {
-                var users = await _adminService.GetUsersAsync(page, limit, role, search);
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting users");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-
-        /// <summary>
-        /// Cambia el rol de un usuario.
-        /// </summary>
-        [HttpPut("users/{id}/role")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateRoleDto dto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var validRoles = new[] { "Admin", "Employee", "Customer" };
-                if (!validRoles.Contains(dto.Role))
-                {
-                    return BadRequest(new { message = "Rol inválido" });
-                }
-
-                var success = await _adminService.UpdateUserRoleAsync(id, dto.Role);
-                if (!success)
-                {
-                    return NotFound(new { message = "Usuario no encontrado" });
-                }
-
-                return Ok(new 
-                { 
-                    id = id, 
-                    role = dto.Role,
-                    message = "Rol actualizado exitosamente" 
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating user role {UserId}", id);
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-
-        /// <summary>
-        /// Activa o desactiva un usuario.
-        /// </summary>
-        [HttpPut("users/{id}/toggle-status")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> ToggleUserStatus(int id)
-        {
-            try
-            {
-                var success = await _adminService.ToggleUserStatusAsync(id);
-                if (!success)
-                {
-                    return NotFound(new { message = "Usuario no encontrado" });
-                }
-
-                return Ok(new 
-                { 
-                    id = id,
-                    message = "Estado del usuario actualizado exitosamente" 
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error toggling user status {UserId}", id);
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
+        // ==================== USER MANAGEMENT ====================
+        // NOTA: Los endpoints de gestión de usuarios se encuentran en AdminUsersController.cs
+        // para evitar conflictos de rutas y mejorar la organización del código.
+        // Endpoints disponibles en AdminUsersController:
+        // - GET    /api/admin/users
+        // - GET    /api/admin/users/{id}
+        // - PUT    /api/admin/users/{id}
+        // - DELETE /api/admin/users/{id}
     }
 }

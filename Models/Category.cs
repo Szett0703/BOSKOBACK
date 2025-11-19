@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace DBTest_BACK.Models
 {
@@ -24,7 +25,8 @@ namespace DBTest_BACK.Models
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation property
+        // Navigation property - Ignorar para evitar ciclos
+        [JsonIgnore]
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

@@ -1,5 +1,6 @@
 using DBTest_BACK.Data;
 using DBTest_BACK.Services;
+using DBTest_BACK.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -32,37 +33,44 @@ builder.WebHost.UseUrls("https://localhost:5006", "http://localhost:5005");
 // SERVICIOS
 // ============================================
 
-// Controllers y API
+// Controllers y API con configuración completa de JSON
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Manejar referencias circulares
+        // Manejar referencias circulares - CRÍTICO para Swagger
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-        // Escribir JSON con indentación para mejor legibilidad
-        options.JsonSerializerOptions.WriteIndented = true;
         // Ignorar propiedades nulas
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Configuración adicional para evitar problemas
+        options.JsonSerializerOptions.MaxDepth = 32;
     });
+
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger con configuración de seguridad JWT
+// Swagger con configuración ROBUSTA para evitar errores 500
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo 
     { 
         Title = "Bosko E-Commerce API", 
         Version = "v1",
-        Description = "API para gestión de pedidos, productos y usuarios"
+        Description = "API para gestión de pedidos, productos y usuarios",
+        Contact = new OpenApiContact
+        {
+            Name = "Bosko Team",
+            Email = "support@bosko.com"
+        }
     });
     
     // Configurar JWT en Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Authorization: Bearer {token}\"",
+        Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
     });
     
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -76,32 +84,43 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "Bearer"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 
-    // Ignorar referencias circulares en Swagger
-    c.CustomSchemaIds(type => type.FullName);
+    // ⚠️ CONFIGURACIÓN CRÍTICA PARA EVITAR ERROR 500 ⚠️
     
-    // Usar el comportamiento seguro para la generación de esquemas
+    // 1. Usar nombres completos para evitar conflictos
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
+    
+    // 2. Ignorar propiedades virtuales que causan ciclos
+    c.SchemaFilter<IgnoreVirtualPropertiesSchemaFilter>();
+    
+    // 3. Configuración segura de referencias
     c.UseAllOfToExtendReferenceSchemas();
+    c.UseOneOfForPolymorphism();
     c.UseAllOfForInheritance();
+    
+    // 4. Opciones de serialización seguras
+    c.DescribeAllParametersInCamelCase();
 });
 
 // Configurar DbContext con SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 // Registrar servicios
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
-// ============================================
-// NUEVOS SERVICIOS DEL PANEL ADMIN
-// ============================================
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<ICategoryAdminService, CategoryAdminService>();
+builder.Services.AddScoped<IProductAdminService, ProductAdminService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 // ============================================
 // AUTENTICACIÓN JWT
@@ -181,7 +200,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials()
-        .WithExposedHeaders("Content-Disposition"); // Para descargas de archivos
+        .WithExposedHeaders("Content-Disposition");
     });
 });
 
@@ -191,6 +210,7 @@ builder.Services.AddCors(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // ============================================
 // BUILD APP
@@ -210,42 +230,52 @@ Console.WriteLine($"HTTPS: https://localhost:5006");
 Console.WriteLine($"HTTP:  http://localhost:5005");
 Console.WriteLine($"Swagger: https://localhost:5006/swagger");
 Console.WriteLine("============================================");
-Console.WriteLine("" );
+Console.WriteLine("");
 
-// Swagger (solo en desarrollo)
+// Configuración específica para Development
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bosko API v1");
         c.RoutePrefix = "swagger";
+        c.DisplayRequestDuration();
+        c.EnableDeepLinking();
+        c.EnableFilter();
+        c.ShowExtensions();
+        c.EnableValidator();
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     });
     Console.WriteLine("✅ Swagger UI habilitado en: https://localhost:5006/swagger");
+}
+else
+{
+    app.UseHsts();
 }
 
 // HTTPS Redirection
 app.UseHttpsRedirection();
 
-// Routing (DEBE IR ANTES DE CORS Y AUTH)
+// Routing
 app.UseRouting();
 
-// CORS (DEBE IR DESPUÉS DE ROUTING Y ANTES DE AUTH)
+// CORS
 app.UseCors("AllowFrontend");
 Console.WriteLine("✅ CORS configurado para: http://localhost:4200, http://localhost:4300");
 
-// Authentication y Authorization (EN ESTE ORDEN)
+// Authentication y Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Middleware de logging personalizado
+// Middleware de logging
 app.Use(async (context, next) =>
 {
     var method = context.Request.Method;
     var path = context.Request.Path;
-    var origin = context.Request.Headers["Origin"].ToString();
     
-    Console.WriteLine($"📨 {method} {path} - Origin: {origin}");
+    Console.WriteLine($"📨 {method} {path}");
     
     await next();
     
@@ -257,7 +287,7 @@ app.Use(async (context, next) =>
 // Map Controllers
 app.MapControllers();
 
-// Endpoint de health check
+// Health check
 app.MapGet("/health", () => new 
 { 
     status = "healthy",
@@ -268,7 +298,7 @@ app.MapGet("/health", () => new
 .WithName("HealthCheck")
 .AllowAnonymous();
 
-// Endpoint raíz
+// Root endpoint
 app.MapGet("/", () => new
 {
     message = "Bosko E-Commerce API",
@@ -293,8 +323,10 @@ Console.WriteLine("============================================");
 Console.WriteLine("");
 Console.WriteLine("📝 Endpoints principales:");
 Console.WriteLine("   POST   /api/auth/login");
+Console.WriteLine("   POST   /api/auth/register");
 Console.WriteLine("   GET    /api/admin/orders");
 Console.WriteLine("   GET    /api/products");
+Console.WriteLine("   GET    /api/categories");
 Console.WriteLine("   GET    /health");
 Console.WriteLine("");
 

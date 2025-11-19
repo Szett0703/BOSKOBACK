@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace DBTest_BACK.Models
 {
@@ -25,7 +26,8 @@ namespace DBTest_BACK.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Relación
+        // Relación - Ignorar para evitar ciclos
+        [JsonIgnore]
         public User? User { get; set; }
     }
 }

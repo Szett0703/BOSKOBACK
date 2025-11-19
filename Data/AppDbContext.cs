@@ -17,10 +17,11 @@ namespace DBTest_BACK.Data
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
-        // Tablas de Admin Panel (nuevas)
+        // Tablas de Admin Panel
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistory { get; set; }
+        public DbSet<ShippingAddress> ShippingAddresses { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
 
@@ -31,23 +32,71 @@ namespace DBTest_BACK.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configuración de Product y Category
-            modelBuilder.Entity<Product>()
-                .HasOne(p => p.Category)
-                .WithMany(c => c.Products)
-                .HasForeignKey(p => p.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+            // ============================================
+            // CONFIGURACIÓN DE PRODUCT Y CATEGORY
+            // ============================================
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.ToTable("Products");
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+                
+                entity.Property(e => e.Description)
+                    .HasMaxLength(1000);
+                
+                entity.Property(e => e.Price)
+                    .IsRequired()
+                    .HasColumnType("decimal(10,2)");
+                
+                entity.Property(e => e.Stock)
+                    .IsRequired();
+                
+                entity.Property(e => e.Image)
+                    .HasMaxLength(500);
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                // Relación con Category
+                entity.HasOne(p => p.Category)
+                    .WithMany(c => c.Products)
+                    .HasForeignKey(p => p.CategoryId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Índices
+                entity.HasIndex(e => e.CategoryId)
+                    .HasDatabaseName("IX_Products_CategoryId");
+                
+                entity.HasIndex(e => e.Name)
+                    .HasDatabaseName("IX_Products_Name");
+            });
 
-            // Configuración de índices para mejor performance
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.CategoryId)
-                .HasDatabaseName("IX_Products_CategoryId");
+            modelBuilder.Entity<Category>(entity =>
+            {
+                entity.ToTable("Categories");
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.Description)
+                    .IsRequired()
+                    .HasMaxLength(500);
+                
+                entity.Property(e => e.Image)
+                    .HasMaxLength(500);
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+            });
 
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Name)
-                .HasDatabaseName("IX_Products_Name");
-
-            // Configuración de User
+            // ============================================
+            // CONFIGURACIÓN DE USER
+            // ============================================
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("Users");
@@ -55,57 +104,122 @@ namespace DBTest_BACK.Data
                 
                 entity.Property(e => e.Name)
                     .IsRequired()
-                    .HasMaxLength(100);
+                    .HasMaxLength(150); // Actualizado para coincidir con DB
                 
                 entity.Property(e => e.Email)
                     .IsRequired()
+                    .HasMaxLength(150); // Actualizado para coincidir con DB
+                
+                entity.Property(e => e.PasswordHash)
                     .HasMaxLength(255);
                 
-                entity.HasIndex(e => e.Email)
-                    .IsUnique()
-                    .HasDatabaseName("IX_Users_Email");
+                entity.Property(e => e.Phone)
+                    .HasMaxLength(50); // Actualizado para coincidir con DB
                 
                 entity.Property(e => e.Role)
                     .IsRequired()
-                    .HasMaxLength(20);
-                
-                entity.HasIndex(e => e.Role)
-                    .HasDatabaseName("IX_Users_Role");
+                    .HasMaxLength(50); // Actualizado para coincidir con DB
                 
                 entity.Property(e => e.Provider)
                     .IsRequired()
-                    .HasMaxLength(20);
+                    .HasMaxLength(50); // Actualizado para coincidir con DB
                 
-                entity.HasIndex(e => e.Provider)
-                    .HasDatabaseName("IX_Users_Provider");
+                entity.Property(e => e.IsActive)
+                    .IsRequired();
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired();
+                
+                // Índice único en Email
+                entity.HasIndex(e => e.Email)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Users_Email");
             });
 
-            // Configuración de PasswordResetToken
+            // ============================================
+            // CONFIGURACIÓN DE PASSWORDRESETTOKEN
+            // ============================================
             modelBuilder.Entity<PasswordResetToken>(entity =>
             {
                 entity.ToTable("PasswordResetTokens");
                 entity.HasKey(e => e.Id);
                 
+                entity.Property(e => e.Token)
+                    .IsRequired()
+                    .HasMaxLength(255); // Actualizado para coincidir con DB
+                
+                entity.Property(e => e.ExpiresAt)
+                    .IsRequired();
+                
+                entity.Property(e => e.IsUsed)
+                    .IsRequired();
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                // Relación con User
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
-                entity.HasIndex(e => e.Token)
-                    .HasDatabaseName("IX_PasswordResetTokens_Token");
             });
 
-            // Configuración de Order
+            // ============================================
+            // CONFIGURACIÓN DE ORDER
+            // ============================================
             modelBuilder.Entity<Order>(entity =>
             {
                 entity.ToTable("Orders");
                 entity.HasKey(e => e.Id);
                 
+                entity.Property(e => e.CustomerName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.CustomerEmail)
+                    .IsRequired()
+                    .HasMaxLength(255);
+                
+                entity.Property(e => e.ShippingAddress)
+                    .IsRequired()
+                    .HasMaxLength(500);
+                
+                entity.Property(e => e.Subtotal)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+                
+                entity.Property(e => e.Shipping)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+                
+                entity.Property(e => e.Total)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+                
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                
+                entity.Property(e => e.PaymentMethod)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired();
+                
+                // Relación con Customer (User)
                 entity.HasOne(e => e.Customer)
                     .WithMany()
                     .HasForeignKey(e => e.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
                 
+                // Índices
                 entity.HasIndex(e => e.CustomerId)
                     .HasDatabaseName("IX_Orders_CustomerId");
                 
@@ -116,12 +230,30 @@ namespace DBTest_BACK.Data
                     .HasDatabaseName("IX_Orders_CreatedAt");
             });
 
-            // Configuración de OrderItem
+            // ============================================
+            // CONFIGURACIÓN DE ORDERITEM
+            // ============================================
             modelBuilder.Entity<OrderItem>(entity =>
             {
                 entity.ToTable("OrderItems");
                 entity.HasKey(e => e.Id);
                 
+                entity.Property(e => e.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(200);
+                
+                entity.Property(e => e.Quantity)
+                    .IsRequired();
+                
+                entity.Property(e => e.Price)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+                
+                entity.Property(e => e.Subtotal)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+                
+                // Relaciones
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.Items)
                     .HasForeignKey(e => e.OrderId)
@@ -132,6 +264,7 @@ namespace DBTest_BACK.Data
                     .HasForeignKey(e => e.ProductId)
                     .OnDelete(DeleteBehavior.Restrict);
                 
+                // Índices
                 entity.HasIndex(e => e.OrderId)
                     .HasDatabaseName("IX_OrderItems_OrderId");
                 
@@ -139,68 +272,105 @@ namespace DBTest_BACK.Data
                     .HasDatabaseName("IX_OrderItems_ProductId");
             });
 
-            // Configuración de OrderStatusHistory
+            // ============================================
+            // CONFIGURACIÓN DE ORDERSTATUSHISTORY
+            // ============================================
             modelBuilder.Entity<OrderStatusHistory>(entity =>
             {
                 entity.ToTable("OrderStatusHistory");
                 entity.HasKey(e => e.Id);
                 
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                
+                entity.Property(e => e.Note)
+                    .HasMaxLength(500);
+                
+                entity.Property(e => e.Timestamp)
+                    .IsRequired();
+                
+                // Relación
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.StatusHistory)
                     .HasForeignKey(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
                 
+                // Índice
                 entity.HasIndex(e => e.OrderId)
                     .HasDatabaseName("IX_OrderStatusHistory_OrderId");
             });
 
-            // Configuración de ActivityLog
-            modelBuilder.Entity<ActivityLog>(entity =>
+            // ============================================
+            // CONFIGURACIÓN DE SHIPPINGADDRESS
+            // ============================================
+            modelBuilder.Entity<ShippingAddress>(entity =>
             {
-                entity.ToTable("ActivityLogs");
+                entity.ToTable("ShippingAddresses");
                 entity.HasKey(e => e.Id);
                 
-                entity.HasOne(e => e.User)
-                    .WithMany()
-                    .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                entity.Property(e => e.FullName)
+                    .IsRequired()
+                    .HasMaxLength(100);
                 
-                entity.HasIndex(e => e.Timestamp)
-                    .HasDatabaseName("IX_ActivityLogs_Timestamp");
+                entity.Property(e => e.Phone)
+                    .IsRequired()
+                    .HasMaxLength(20);
                 
-                entity.HasIndex(e => e.Type)
-                    .HasDatabaseName("IX_ActivityLogs_Type");
-            });
-
-            // Configuración de Notification
-            modelBuilder.Entity<Notification>(entity =>
-            {
-                entity.ToTable("Notifications");
-                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Street)
+                    .IsRequired()
+                    .HasMaxLength(200);
                 
-                entity.HasOne(e => e.User)
-                    .WithMany()
-                    .HasForeignKey(e => e.UserId)
+                entity.Property(e => e.City)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.State)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.PostalCode)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                
+                entity.Property(e => e.Country)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                // Relación uno a uno con Order
+                entity.HasOne(e => e.Order)
+                    .WithOne(o => o.ShippingAddressDetails)
+                    .HasForeignKey<ShippingAddress>(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
-                entity.HasIndex(e => e.UserId)
-                    .HasDatabaseName("IX_Notifications_UserId");
-                
-                entity.HasIndex(e => e.IsRead)
-                    .HasDatabaseName("IX_Notifications_IsRead");
             });
 
-            // Configuración de tabla antigua Productos (se mantiene)
+            // ============================================
+            // CONFIGURACIÓN DE PRODUCTOS (TABLA ANTIGUA)
+            // ============================================
             modelBuilder.Entity<Producto>(entity =>
             {
                 entity.ToTable("Productos");
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.Descripcion).HasMaxLength(255);
-                entity.Property(e => e.Precio).HasColumnType("decimal(10,2)").IsRequired();
-                entity.Property(e => e.Stock).IsRequired();
-                entity.Property(e => e.Categoria).HasMaxLength(50);
-                entity.Property(e => e.FechaCreacion).IsRequired();
+                
+                entity.Property(e => e.Nombre)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(255);
+                
+                entity.Property(e => e.Precio)
+                    .HasColumnType("decimal(10,2)")
+                    .IsRequired();
+                
+                entity.Property(e => e.Stock)
+                    .IsRequired();
+                
+                entity.Property(e => e.Categoria)
+                    .HasMaxLength(50);
+                
+                entity.Property(e => e.FechaCreacion)
+                    .IsRequired();
             });
         }
     }
