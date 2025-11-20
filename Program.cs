@@ -43,6 +43,8 @@ else
 {
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     Console.WriteLine("🔌 Using LOCAL Database Connection");
+    Console.WriteLine("[INFO] Si estás en Railway, configura la variable de entorno:");
+    Console.WriteLine("[INFO] ConnectionStrings__DefaultConnection=postgresql://usuario:password@host:5432/database");
 }
 
 Console.WriteLine($"ConnectionString: {connectionString}");
