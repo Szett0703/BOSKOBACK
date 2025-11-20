@@ -48,6 +48,19 @@ else
 Console.WriteLine($"ConnectionString: {connectionString}");
 
 // ============================================
+// VALIDATE CONNECTION STRING FOR POSTGRESQL
+// ============================================
+
+if (!string.IsNullOrEmpty(connectionString) &&
+    (connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
+     connectionString.Contains("Integrated Security", StringComparison.OrdinalIgnoreCase) ||
+     connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)))
+{
+    Console.WriteLine("[ERROR] La connection string detectada parece ser de SQL Server. Asegúrate de usar una cadena de conexión PostgreSQL o establece ConnectionStrings__DefaultConnection.");
+    throw new InvalidOperationException("Connection string no válida para Npgsql. Use PostgreSQL connection string.");
+}
+
+// ============================================
 // 🐘 POSTGRESQL CONFIG
 // ============================================
 
