@@ -166,7 +166,9 @@ builder.Services.AddCors(policy =>
          .SetIsOriginAllowed(origin =>
              origin.StartsWith("http://localhost") ||
              origin.StartsWith("https://localhost") ||
-             origin.Contains("netlify.app")
+             origin.Contains("netlify.app") ||
+             origin == "https://boskoshop.com" ||
+             origin == "https://www.boskoshop.com"
          );
     });
 });
