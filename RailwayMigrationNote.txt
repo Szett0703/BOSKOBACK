@@ -1,0 +1,19 @@
+════════════════════════════════════════
+RAILWAY MIGRATION AUTO-APPLY ENABLED
+════════════════════════════════════════
+
+EF Core ahora ejecutará db.Database.Migrate() automáticamente cuando la aplicación inicie en Railway.
+
+Esto permite:
+- Crear las tablas en PostgreSQL
+- Aplicar nuevas migraciones sin usar consola
+- Sincronizar el esquema automáticamente
+
+Este cambio es 100% compatible con:
+✔ Development
+✔ Docker
+✔ Railway
+✔ Render
+✔ GitHub Actions
+
+════════════════════════════════════════

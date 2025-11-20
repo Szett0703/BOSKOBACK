@@ -1,0 +1,187 @@
+================================================================================
+INSTRUCCIONES DE INTEGRACIÓN - Program.cs
+================================================================================
+
+📌 PASO 1: MODIFICAR Program.cs
+================================================================================
+
+Reemplazar la sección de migraciones automáticas en Program.cs:
+
+CÓDIGO ACTUAL (líneas aproximadas 123-129):
+──────────────────────────────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Console.WriteLine("🔄 Applying EF Core Migrations...");
+    db.Database.Migrate();
+    Console.WriteLine("✅ Migrations applied successfully!");
+}
+──────────────────────────────────────────────────────────────────────────────
+
+REEMPLAZAR POR:
+──────────────────────────────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Console.WriteLine("🔄 Applying EF Core Migrations...");
+    db.Database.Migrate();
+    Console.WriteLine("✅ Migrations applied successfully!");
+    
+    // 🌱 DATABASE SEEDING
+    Console.WriteLine("🌱 Seeding database...");
+    await DatabaseSeeder.SeedAsync(scope.ServiceProvider);
+}
+──────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+📌 PASO 2: MODIFICAR app.Run() AL FINAL
+================================================================================
+
+CÓDIGO ACTUAL (última línea):
+──────────────────────────────────────────────────────────────────────────────
+app.Run();
+──────────────────────────────────────────────────────────────────────────────
+
+REEMPLAZAR POR:
+──────────────────────────────────────────────────────────────────────────────
+await app.RunAsync();
+──────────────────────────────────────────────────────────────────────────────
+
+O ALTERNATIVAMENTE, si prefieres mantener app.Run(), usa esta versión:
+──────────────────────────────────────────────────────────────────────────────
+// Ejecutar seeding en startup (antes de app.Run())
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Console.WriteLine("🔄 Applying EF Core Migrations...");
+    db.Database.Migrate();
+    Console.WriteLine("✅ Migrations applied successfully!");
+    
+    // 🌱 DATABASE SEEDING
+    Console.WriteLine("🌱 Seeding database...");
+    DatabaseSeeder.SeedAsync(scope.ServiceProvider).Wait();
+}
+
+Console.WriteLine($"✅ Bosko API running on port {port}");
+app.Run();
+──────────────────────────────────────────────────────────────────────────────
+
+⚠️  NOTA: Usar .Wait() en lugar de await requiere que no uses await en otros lugares.
+          Es mejor usar await app.RunAsync() como solución moderna.
+
+================================================================================
+📌 PASO 3: VERIFICAR USING STATEMENT AL INICIO
+================================================================================
+
+Asegurarse de que existe este using al inicio de Program.cs:
+
+using DBTest_BACK.Data;
+
+Si no existe, agregarlo.
+
+================================================================================
+📋 PROGRAM.CS COMPLETO (SECCIÓN MODIFICADA)
+================================================================================
+
+// ... código anterior ...
+
+var app = builder.Build();
+
+// ============================================
+// 📌 APPLY EF CORE MIGRATIONS + DATABASE SEEDING
+// ============================================
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Console.WriteLine("🔄 Applying EF Core Migrations...");
+    db.Database.Migrate();
+    Console.WriteLine("✅ Migrations applied successfully!");
+    
+    // 🌱 DATABASE SEEDING
+    Console.WriteLine("🌱 Seeding database...");
+    await DatabaseSeeder.SeedAsync(scope.ServiceProvider);
+}
+
+// ============================================
+// 🌐 SWAGGER
+// ============================================
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapGet("/health", () => new { status = "healthy", environment = app.Environment.EnvironmentName })
+    .AllowAnonymous();
+
+Console.WriteLine($"✅ Bosko API running on port {port}");
+
+await app.RunAsync();  // <-- Cambiar app.Run() por app.RunAsync()
+
+================================================================================
+🚀 COMANDOS PARA EJECUTAR
+================================================================================
+
+# 1. Compilar para verificar errores
+dotnet build
+
+# 2. Ejecutar la aplicación
+dotnet run
+
+# 3. Observar logs en consola (debería aparecer):
+   🔄 Applying EF Core Migrations...
+   ✅ Migrations applied successfully!
+   🌱 Seeding database...
+   ✅ Seeded 3 users
+   ✅ Seeded 3 user preferences
+   ✅ Seeded 6 categories
+   ✅ Seeded 18 products
+   ✅ Seeded 4 addresses
+   ✅ Seeded 6 orders
+   ✅ Seeded 18 order items
+   ✅ Seeded 6 shipping addresses
+   ✅ Seeded 14 order status history records
+   ✅ Seeded 9 notifications
+   ✅ Seeded 10 activity logs
+   ✅ Database seeding completed successfully!
+   ✅ Bosko API running on port 8080
+
+================================================================================
+⚠️ SOLUCIÓN DE PROBLEMAS
+================================================================================
+
+ERROR: "await can only be used in an async method"
+SOLUCIÓN: Cambiar app.Run() por await app.RunAsync()
+
+ERROR: "DatabaseSeeder does not exist"
+SOLUCIÓN: Verificar que DatabaseSeeder.cs está en Data/ y compilar
+
+ERROR: "Violation of PRIMARY KEY constraint"
+SOLUCIÓN: El seeder ya insertó datos previamente. Validación .Any() debería prevenir esto.
+
+ERROR: "The INSERT statement conflicted with FOREIGN KEY constraint"
+SOLUCIÓN: Verificar orden de inserción en el seeder (debería estar correcto)
+
+ERROR: "Cannot insert duplicate key in object dbo.Users"
+SOLUCIÓN: Los usuarios ya existen. El seeder verifica con .Any() antes de insertar.
+
+================================================================================
+✅ RESUMEN
+================================================================================
+
+1. Agregar await DatabaseSeeder.SeedAsync(scope.ServiceProvider);
+2. Cambiar app.Run() por await app.RunAsync()
+3. Compilar y ejecutar
+4. Verificar logs en consola
+5. Probar endpoints en Swagger
+
+================================================================================

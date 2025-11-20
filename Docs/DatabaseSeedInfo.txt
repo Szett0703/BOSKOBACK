@@ -1,0 +1,525 @@
+================================================================================
+DATABASE SEEDER - INFORMACIÓN COMPLETA
+================================================================================
+Proyecto: BOSKO E-Commerce Backend
+Framework: .NET 8
+Base de Datos: PostgreSQL (Railway)
+Fecha de Generación: 2024
+================================================================================
+
+================================================================================
+1. DESCRIPCIÓN GENERAL
+================================================================================
+
+El DatabaseSeeder es una clase estática que pobla la base de datos con datos
+iniciales de prueba para el proyecto Bosko E-Commerce.
+
+CARACTERÍSTICAS PRINCIPALES:
+────────────────────────────────────────────────────────────────────────────
+✅ Idempotente: NO crea datos duplicados
+✅ Asíncrono: Usa async/await para operaciones eficientes
+✅ Ordenado: Respeta dependencias de Foreign Keys
+✅ Completo: Incluye todos los datos necesarios para demostración
+✅ Seguro: Valida existencia de datos antes de insertar
+✅ Trazable: Incluye logs detallados de cada operación
+
+================================================================================
+2. ORDEN DE EJECUCIÓN DEL SEED
+================================================================================
+
+El seeder respeta el siguiente orden para evitar violaciones de FK:
+
+NIVEL 1 - SIN DEPENDENCIAS:
+────────────────────────────────────────────────────────────────────────────
+1. Users (6 usuarios)
+2. Categories (6 categorías)
+
+NIVEL 2 - DEPENDEN DE NIVEL 1:
+────────────────────────────────────────────────────────────────────────────
+3. Products (30 productos, dependen de Categories)
+4. Addresses (10 direcciones, dependen de Users)
+
+NIVEL 3 - DEPENDEN DE NIVEL 1-2:
+────────────────────────────────────────────────────────────────────────────
+5. Orders (15 órdenes, dependen de Users)
+
+NIVEL 4 - DEPENDEN DE NIVEL 3:
+────────────────────────────────────────────────────────────────────────────
+6. OrderItems (2-4 items por orden, dependen de Orders + Products)
+7. ShippingAddresses (1 por orden, dependen de Orders)
+8. OrderStatusHistory (varios por orden, dependen de Orders)
+
+IMPORTANTE:
+────────────────────────────────────────────────────────────────────────────
+⚠️  NO se puede alterar este orden sin romper las relaciones de FK
+⚠️  Cada nivel requiere que el anterior esté completo
+
+================================================================================
+3. REGLAS DE FOREIGN KEYS Y DELETE BEHAVIOR
+================================================================================
+
+Order.CustomerId → Users.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: RESTRICT
+Significado: NO se puede eliminar un User que tenga Orders
+Razón: Preservar historial de órdenes
+
+OrderItem.OrderId → Orders.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: CASCADE
+Significado: Al eliminar Order, se eliminan automáticamente sus OrderItems
+Razón: Los items no tienen sentido sin su orden
+
+OrderItem.ProductId → Products.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: RESTRICT
+Significado: NO se puede eliminar Product si tiene OrderItems
+Razón: Preservar historial de ventas
+
+ShippingAddress.OrderId → Orders.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: CASCADE
+Significado: Al eliminar Order, se elimina su ShippingAddress
+Razón: La dirección de envío no tiene sentido sin la orden
+Tipo: Relación 1:1 (uno a uno)
+
+Product.CategoryId → Categories.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: SET NULL
+Significado: Al eliminar Category, los Products quedan sin categoría (null)
+Razón: Preservar productos aunque se elimine su categoría
+
+Address.UserId → Users.Id
+────────────────────────────────────────────────────────────────────────────
+Delete Behavior: CASCADE
+Significado: Al eliminar User, se eliminan todas sus direcciones
+Razón: Las direcciones personales no tienen sentido sin el usuario
+
+================================================================================
+4. CANTIDADES GENERADAS POR EL SEEDER
+================================================================================
+
+USUARIOS:
+────────────────────────────────────────────────────────────────────────────
+Total: 6 usuarios
+  - 1 Administrador (admin@bosko.com)
+  - 5 Clientes (cliente1@bosko.com a cliente5@bosko.com)
+
+Contraseñas:
+  - Admin: Admin@Bosko2025
+  - Clientes: Cliente@123
+
+CATEGORÍAS:
+────────────────────────────────────────────────────────────────────────────
+Total: 6 categorías
+  1. Hombres
+  2. Mujeres
+  3. Niños
+  4. Accesorios
+  5. Calzado
+  6. Deportiva
+
+PRODUCTOS:
+────────────────────────────────────────────────────────────────────────────
+Total: 30 productos (5 por categoría)
+Rango de precios: €14.99 - €149.99
+Stock inicial: 15 - 70 unidades por producto
+Todos incluyen:
+  - Nombre descriptivo
+  - Descripción detallada
+  - Precio
+  - Stock
+  - Imagen de Unsplash
+  - Fecha de creación
+
+DIRECCIONES:
+────────────────────────────────────────────────────────────────────────────
+Total: 10 direcciones (2 por cliente)
+Distribución:
+  - 1 dirección predeterminada (IsDefault = true)
+  - 1 dirección alternativa (IsDefault = false)
+Ubicaciones: Madrid, Barcelona, Valencia, Sevilla, Málaga, etc.
+
+ÓRDENES:
+────────────────────────────────────────────────────────────────────────────
+Total: 15 órdenes
+Distribución: 3 órdenes por cliente
+Estados:
+  - pending (pedidos pendientes)
+  - processing (en preparación)
+  - shipped (enviados)
+  - delivered (entregados)
+  - cancelled (cancelados)
+
+Métodos de pago:
+  - credit_card
+  - debit_card
+  - paypal
+
+Fechas: Entre 10 y 30 días atrás
+Shipping: Entre €5 y €20 por orden
+Tax: €0 (sin impuestos)
+
+ORDER ITEMS:
+────────────────────────────────────────────────────────────────────────────
+Total: Variable (2-4 items por orden)
+Cantidades: 1-3 unidades por producto
+Subtotal: Calculado como Price × Quantity
+Productos únicos: No se repiten productos en la misma orden
+
+SHIPPING ADDRESSES:
+────────────────────────────────────────────────────────────────────────────
+Total: 15 (1 por cada orden)
+Relación: 1:1 con Orders
+Países: España, México, Colombia (aleatorio)
+Incluye: Nombre completo, teléfono, calle, ciudad, código postal
+
+ORDER STATUS HISTORY:
+────────────────────────────────────────────────────────────────────────────
+Total: Variable según el estado final de cada orden
+Ejemplos:
+  - Pending: 1 registro
+  - Processing: 2 registros (pending → processing)
+  - Delivered: 4 registros (pending → processing → shipped → delivered)
+  - Cancelled: 2 registros (pending → cancelled)
+
+================================================================================
+5. ADVERTENCIAS IMPORTANTES
+================================================================================
+
+⚠️  IDEMPOTENCIA:
+────────────────────────────────────────────────────────────────────────────
+El seeder verifica si existen usuarios antes de ejecutarse:
+
+    if (await db.Users.AnyAsync())
+    {
+        Console.WriteLine("⚠️  La base de datos ya contiene datos.");
+        return;
+    }
+
+Si ya existen datos, el seeder NO se ejecuta para evitar duplicados.
+
+⚠️  NO USAR EN PRODUCCIÓN:
+────────────────────────────────────────────────────────────────────────────
+Este seeder es SOLO para desarrollo y demostración.
+En producción, los datos deben:
+  - Ser importados de fuentes reales
+  - Cumplir con GDPR y protección de datos
+  - Tener contraseñas más robustas
+  - Ser validados por administradores
+
+⚠️  CONTRASEÑAS HASHEADAS:
+────────────────────────────────────────────────────────────────────────────
+Las contraseñas se hashean con BCrypt:
+
+    var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@Bosko2025");
+
+Nunca se almacenan contraseñas en texto plano.
+
+⚠️  RELACIÓN ShippingAddress:
+────────────────────────────────────────────────────────────────────────────
+Order tiene DOS campos relacionados con dirección de envío:
+
+1. ShippingAddress (string): Texto plano para referencia rápida
+2. ShippingAddressDetails (ShippingAddress): Tabla relacionada 1:1
+
+Ambos se crean en el seeder.
+
+⚠️  FECHAS EN UTC:
+────────────────────────────────────────────────────────────────────────────
+Todas las fechas usan DateTime.UtcNow para evitar problemas de zona horaria:
+
+    CreatedAt = DateTime.UtcNow.AddMonths(-5)
+
+PostgreSQL las almacena como "timestamp with time zone".
+
+⚠️  IMÁGENES DE UNSPLASH:
+────────────────────────────────────────────────────────────────────────────
+Las URLs de imágenes apuntan a Unsplash:
+
+    Image = "https://images.unsplash.com/photo-..."
+
+En producción, usar un CDN propio o servicio de almacenamiento seguro.
+
+================================================================================
+6. CÓMO MODIFICAR EL SEEDER
+================================================================================
+
+AGREGAR MÁS USUARIOS:
+────────────────────────────────────────────────────────────────────────────
+1. Agregar un nuevo objeto User en la lista "users"
+2. Incrementar el índice en Addresses si necesita direcciones
+3. Incrementar el índice en Orders si genera órdenes para este usuario
+
+AGREGAR MÁS CATEGORÍAS:
+────────────────────────────────────────────────────────────────────────────
+1. Agregar un nuevo objeto Category en la lista "categories"
+2. Agregar productos correspondientes usando el índice correcto:
+   CategoryId = categories[X].Id
+
+AGREGAR MÁS PRODUCTOS:
+────────────────────────────────────────────────────────────────────────────
+1. Agregar un nuevo objeto Product en la lista "products"
+2. Asignar CategoryId correctamente
+3. Verificar que el índice en OrderItems se ajuste
+
+CAMBIAR CANTIDADES DE ÓRDENES:
+────────────────────────────────────────────────────────────────────────────
+1. Modificar el bucle for (int i = 0; i < 15; i++)
+2. Ajustar la lógica de distribución entre clientes si es necesario
+3. Verificar que hay suficientes productos para los items
+
+CAMBIAR ESTADOS DE ÓRDENES:
+────────────────────────────────────────────────────────────────────────────
+1. Modificar el array "orderStatuses"
+2. Ajustar el switch en OrderStatusHistory para nuevos estados
+3. Mantener coherencia entre Order.Status y su historial
+
+CAMBIAR MÉTODOS DE PAGO:
+────────────────────────────────────────────────────────────────────────────
+1. Modificar el array "paymentMethods"
+2. Agregar validación si es necesario en el modelo Order
+
+================================================================================
+7. CÓMO EJECUTA RAILWAY EL SEED
+================================================================================
+
+DESPLIEGUE AUTOMÁTICO:
+────────────────────────────────────────────────────────────────────────────
+Railway ejecuta el seeder automáticamente al desplegar si está configurado
+en Program.cs:
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await DatabaseSeeder.SeedAsync(db);
+    }
+
+MIGRACIONES AUTOMÁTICAS:
+────────────────────────────────────────────────────────────────────────────
+Railway ejecuta las migraciones antes del seed:
+
+    await db.Database.MigrateAsync();
+
+Esto asegura que la estructura de la base de datos esté actualizada.
+
+LOGS EN RAILWAY:
+────────────────────────────────────────────────────────────────────────────
+Los logs del seeder aparecen en la consola de Railway:
+
+    === INICIANDO DATABASE SEEDER ===
+    ✅ Base de datos vacía. Iniciando seed...
+    📋 Creando usuarios...
+    ✅ 6 usuarios creados
+    ...
+
+EJECUCIÓN ÚNICA:
+────────────────────────────────────────────────────────────────────────────
+El seeder solo se ejecuta una vez porque verifica:
+
+    if (await db.Users.AnyAsync()) return;
+
+En despliegues posteriores, si ya hay datos, no se ejecuta.
+
+REINICIOS DE BASE DE DATOS:
+────────────────────────────────────────────────────────────────────────────
+Si necesitas reiniciar la base de datos en Railway:
+1. Elimina el servicio de PostgreSQL
+2. Crea uno nuevo
+3. Actualiza las variables de entorno
+4. Redesplegar el backend (el seeder se ejecutará automáticamente)
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+
+ERROR: "The seed operation failed"
+────────────────────────────────────────────────────────────────────────────
+CAUSA: Error en alguna operación de base de datos
+SOLUCIÓN:
+  1. Revisar logs completos en Railway
+  2. Verificar que las migraciones se aplicaron correctamente
+  3. Verificar que la cadena de conexión sea válida
+  4. Verificar que BCrypt.Net esté instalado
+
+ERROR: "Duplicate key violation"
+────────────────────────────────────────────────────────────────────────────
+CAUSA: El seeder intentó crear datos que ya existen
+SOLUCIÓN:
+  1. Verificar que la condición de idempotencia funciona
+  2. Eliminar datos duplicados manualmente
+  3. Reiniciar la base de datos si es entorno de desarrollo
+
+ERROR: "Foreign key violation"
+────────────────────────────────────────────────────────────────────────────
+CAUSA: Se intentó insertar datos en orden incorrecto
+SOLUCIÓN:
+  1. Verificar el orden de inserción (sección 2)
+  2. Asegurar que SaveChangesAsync() se llama después de cada nivel
+  3. Verificar que los IDs se asignan correctamente
+
+ERROR: "BCrypt not found"
+────────────────────────────────────────────────────────────────────────────
+CAUSA: El paquete BCrypt.Net no está instalado
+SOLUCIÓN:
+  dotnet add package BCrypt.Net-Next
+
+ERROR: "Unsplash images not loading"
+────────────────────────────────────────────────────────────────────────────
+CAUSA: URLs de Unsplash pueden cambiar o estar bloqueadas
+SOLUCIÓN:
+  1. Verificar conectividad con Unsplash
+  2. Usar un servicio de imágenes alternativo
+  3. Alojar imágenes en CDN propio
+
+================================================================================
+9. INTEGRACIÓN CON PROGRAM.CS
+================================================================================
+
+CÓDIGO NECESARIO EN PROGRAM.CS:
+────────────────────────────────────────────────────────────────────────────
+
+using DBTest_BACK.Data;
+
+// ...después de app.Build()
+
+// Ejecutar migraciones y seeder
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var db = services.GetRequiredService<AppDbContext>();
+    
+    try
+    {
+        // Ejecutar migraciones pendientes
+        await db.Database.MigrateAsync();
+        Console.WriteLine("✅ Migraciones aplicadas correctamente");
+        
+        // Ejecutar seeder
+        await DatabaseSeeder.SeedAsync(db);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error en migraciones o seeder: {ex.Message}");
+    }
+}
+
+app.Run();
+
+UBICACIÓN EN PROGRAM.CS:
+────────────────────────────────────────────────────────────────────────────
+Debe colocarse DESPUÉS de:
+  - app.Build()
+  - app.UseHttpsRedirection()
+  - app.UseAuthorization()
+
+Y ANTES de:
+  - app.Run()
+
+================================================================================
+10. VERIFICACIÓN POST-SEED
+================================================================================
+
+CÓMO VERIFICAR QUE EL SEED FUNCIONÓ:
+────────────────────────────────────────────────────────────────────────────
+
+1. Revisar logs de Railway:
+   ✅ "=== SEED COMPLETADO CON ÉXITO ==="
+
+2. Conectarse a la base de datos y ejecutar:
+   SELECT COUNT(*) FROM "Users";     -- Debe retornar 6
+   SELECT COUNT(*) FROM "Categories"; -- Debe retornar 6
+   SELECT COUNT(*) FROM "Products";  -- Debe retornar 30
+   SELECT COUNT(*) FROM "Orders";    -- Debe retornar 15
+
+3. Probar login con:
+   Email: admin@bosko.com
+   Password: Admin@Bosko2025
+
+4. Verificar que los productos aparecen en el frontend
+
+5. Verificar que las órdenes tienen items correctos:
+   SELECT o."OrderNumber", COUNT(oi."Id") 
+   FROM "Orders" o 
+   LEFT JOIN "OrderItems" oi ON o."Id" = oi."OrderId"
+   GROUP BY o."OrderNumber";
+
+================================================================================
+11. DATOS DE PRUEBA PARA LOGIN
+================================================================================
+
+USUARIO ADMINISTRADOR:
+────────────────────────────────────────────────────────────────────────────
+Email: admin@bosko.com
+Password: Admin@Bosko2025
+Rol: Admin
+
+USUARIOS CLIENTES:
+────────────────────────────────────────────────────────────────────────────
+Email: cliente1@bosko.com | Password: Cliente@123 | Nombre: María García
+Email: cliente2@bosko.com | Password: Cliente@123 | Nombre: Juan Pérez
+Email: cliente3@bosko.com | Password: Cliente@123 | Nombre: Ana Rodríguez
+Email: cliente4@bosko.com | Password: Cliente@123 | Nombre: Carlos López
+Email: cliente5@bosko.com | Password: Cliente@123 | Nombre: Laura Martínez
+
+NOTAS:
+────────────────────────────────────────────────────────────────────────────
+- Todos los clientes tienen 2 direcciones guardadas
+- Cada cliente tiene 3 órdenes con estados diferentes
+- Las órdenes tienen entre 2-4 productos cada una
+
+================================================================================
+12. MANTENIMIENTO Y ACTUALIZACIONES
+================================================================================
+
+ACTUALIZAR PRODUCTOS:
+────────────────────────────────────────────────────────────────────────────
+1. Modificar la lista de productos en el seeder
+2. Eliminar datos existentes (solo en desarrollo)
+3. Volver a ejecutar el seeder
+4. Verificar que las relaciones se mantengan
+
+AGREGAR NUEVAS TABLAS:
+────────────────────────────────────────────────────────────────────────────
+1. Crear el modelo
+2. Agregar DbSet en AppDbContext
+3. Crear migración
+4. Agregar seed en DatabaseSeeder respetando orden de dependencias
+5. Probar localmente antes de desplegar
+
+CAMBIAR ESTRUCTURA:
+────────────────────────────────────────────────────────────────────────────
+1. NO modificar el seeder directamente en producción
+2. Crear una copia de seguridad de la base de datos
+3. Probar cambios en entorno local
+4. Crear nueva migración
+5. Actualizar seeder si es necesario
+6. Desplegar en staging primero
+
+================================================================================
+13. BUENAS PRÁCTICAS
+================================================================================
+
+✅ SIEMPRE verificar idempotencia antes de ejecutar
+✅ USAR logs para rastrear el progreso del seed
+✅ MANTENER el orden de dependencias FK
+✅ HASHEAR todas las contraseñas
+✅ USAR UTC para todas las fechas
+✅ VALIDAR datos antes de insertar
+✅ MANTENER consistencia entre Order.Status y OrderStatusHistory
+✅ CALCULAR correctamente los totales de órdenes
+✅ PROBAR localmente antes de desplegar
+✅ DOCUMENTAR cualquier cambio en el seeder
+
+❌ NO ejecutar en producción sin datos reales
+❌ NO almacenar contraseñas en texto plano
+❌ NO ignorar errores de FK
+❌ NO cambiar el orden de inserción sin razón
+❌ NO usar IDs hardcodeados (siempre usar objetos creados)
+❌ NO duplicar datos sin verificar
+❌ NO eliminar logs importantes
+❌ NO usar DeleteBehavior incorrecto
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

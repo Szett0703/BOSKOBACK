@@ -406,6 +406,65 @@ namespace DBTest_BACK.Data
                     .IsUnique()
                     .HasDatabaseName("UQ_UserPreferences_UserId");
             });
+
+            // ============================================
+            // CONFIGURACIÓN DE ADDRESS
+            // ============================================
+            modelBuilder.Entity<Address>(entity =>
+            {
+                entity.ToTable("Addresses");
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.UserId)
+                    .IsRequired();
+                
+                entity.Property(e => e.Label)
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.Street)
+                    .IsRequired()
+                    .HasMaxLength(200);
+                
+                entity.Property(e => e.City)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.State)
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.PostalCode)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                
+                entity.Property(e => e.Country)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(e => e.Phone)
+                    .HasMaxLength(20);
+                
+                entity.Property(e => e.IsDefault)
+                    .IsRequired();
+                
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+                
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired();
+                
+                // Relación con User
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Índices
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_Addresses_UserId");
+                
+                entity.HasIndex(e => new { e.UserId, e.IsDefault })
+                    .HasDatabaseName("IX_Addresses_UserId_IsDefault");
+            });
         }
     }
 }

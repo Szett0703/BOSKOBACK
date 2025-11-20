@@ -19,22 +19,21 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 Console.WriteLine($"🚀 Server will listen on: http://0.0.0.0:{port}");
 
 // ============================================
-// 🔌 CONNECTION STRING (LOCAL + RENDER + RAILWAY)
+// 🔌 CONNECTION STRING (LOCAL + RAILWAY)
 // ============================================
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Primero intenta obtener la variable de entorno de Railway
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
-// Variable de Render/Railway
-var envConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-
-if (!string.IsNullOrEmpty(envConnection))
+// Si no existe, usa la conexión local de appsettings.json
+if (string.IsNullOrEmpty(connectionString))
 {
-    connectionString = envConnection;
-    Console.WriteLine("🔌 Using ENV Database Connection");
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    Console.WriteLine("🔌 Using LOCAL Database Connection");
 }
 else
 {
-    Console.WriteLine("🔌 Using LOCAL Database Connection");
+    Console.WriteLine("🔌 Using RAILWAY Database Connection");
 }
 
 Console.WriteLine($"ConnectionString: {connectionString}");
@@ -44,9 +43,7 @@ Console.WriteLine($"ConnectionString: {connectionString}");
 // ============================================
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseNpgsql(connectionString);
-});
+    options.UseNpgsql(connectionString));
 
 // ============================================
 // JSON + CONTROLLERS
@@ -155,6 +152,31 @@ builder.Services.AddCors(policy =>
 // ============================================
 
 var app = builder.Build();
+
+// ============================================
+// 📌 APPLY EF CORE MIGRATIONS + RUN SEEDER
+// ============================================
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var db = services.GetRequiredService<AppDbContext>();
+
+    try
+    {
+        Console.WriteLine("[MIGRATIONS] ⏳ Applying pending migrations...");
+        await db.Database.MigrateAsync();
+        Console.WriteLine("[MIGRATIONS] ✅ Migrations applied successfully!");
+
+        Console.WriteLine("[SEED] 🚀 Executing DatabaseSeeder...");
+        await DBTest_BACK.Seeding.DatabaseSeeder.SeedAsync(db);
+        Console.WriteLine("[SEED] ✅ Database seeded successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] ❌ Error during migrations or seeding: {ex.Message}");
+        Console.WriteLine(ex.ToString());
+    }
+}
 
 // ============================================
 // 🌐 SWAGGER

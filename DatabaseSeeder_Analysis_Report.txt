@@ -1,0 +1,587 @@
+================================================================================
+DATABASE SEEDER - ANÁLISIS COMPLETO PRE-GENERACIÓN
+================================================================================
+Fecha: 2024
+Proyecto: DBTest-BACK (BOSKO E-Commerce API)
+Target Framework: .NET 8
+================================================================================
+
+✅ PASO 1 — ANÁLISIS DEL PROYECTO COMPLETADO
+
+================================================================================
+📊 RESUMEN DE ENTIDADES (DbSets en AppDbContext)
+================================================================================
+
+Total de entidades: 12 (+ 1 legacy)
+
+ENTIDADES PRINCIPALES:
+1.  Users                   ✅ Analizada
+2.  UserPreferences         ✅ Analizada
+3.  Categories              ✅ Analizada
+4.  Products                ✅ Analizada
+5.  Addresses               ✅ Analizada
+6.  Orders                  ✅ Analizada
+7.  OrderItems              ✅ Analizada
+8.  ShippingAddresses       ✅ Analizada
+9.  OrderStatusHistory      ✅ Analizada
+10. ActivityLogs            ✅ Analizada
+11. Notifications           ✅ Analizada
+12. PasswordResetTokens     ✅ Analizada
+
+LEGACY:
+13. Productos               ⚠️  No incluir en seeder (tabla antigua)
+
+================================================================================
+🔍 ANÁLISIS DETALLADO POR ENTIDAD
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+1. USERS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Users
+Fluent API: ✅ Configurada
+Relaciones: 
+  - 1:1 con UserPreferences (Cascade)
+  - 1:N con Orders (como Customer, Restrict)
+  - 1:N con Addresses (Cascade)
+  - 1:N con Notifications
+  - 1:N con ActivityLogs
+
+PROPIEDADES REQUERIDAS:
+  ✅ Name              [MaxLength: 150]
+  ✅ Email             [MaxLength: 150] [UNIQUE INDEX]
+  ✅ Role              [MaxLength: 50]  Default: "Customer"
+  ✅ Provider          [MaxLength: 50]  Default: "Local"
+  ✅ IsActive          Default: true
+  ✅ CreatedAt         
+  ✅ UpdatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ PasswordHash      [MaxLength: 255] - NULL si Provider != "Local"
+  ⚪ Phone             [MaxLength: 50]
+  ⚪ AvatarUrl         [MaxLength: 500]
+
+REGLAS DE NEGOCIO:
+  🔐 Si Provider = "Local" → PasswordHash REQUERIDO
+  🔐 Si Provider = "Google" → PasswordHash puede ser NULL
+  📧 Email DEBE ser único (índice único en DB)
+  👤 Roles válidos: "Admin", "Employee", "Customer"
+
+DATOS A CREAR EN SEEDER:
+  - 1 Admin: admin@bosko.com (Provider: Local, PasswordHash con BCrypt)
+  - 2 Customers: cliente1@bosko.com, cliente2@bosko.com
+
+═══════════════════════════════════════════════════════════════════════════════
+2. USERPREFERENCES
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: UserPreferences
+Fluent API: ✅ Configurada
+Relaciones: 
+  - 1:1 con User (Cascade) [UNIQUE INDEX en UserId]
+
+PROPIEDADES REQUERIDAS:
+  ✅ UserId            [UNIQUE]
+  ✅ Notifications     Default: true
+  ✅ Newsletter        Default: true
+  ✅ CreatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ Language          [MaxLength: 10] Default: "es"
+  ⚪ UpdatedAt
+
+REGLAS DE NEGOCIO:
+  🔒 Un User solo puede tener UNA UserPreferences (relación 1:1)
+  📌 UserId debe ser único
+
+DATOS A CREAR EN SEEDER:
+  - 1 preferencia por cada usuario creado (3 total)
+
+═══════════════════════════════════════════════════════════════════════════════
+3. CATEGORIES
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Categories
+Fluent API: ✅ Configurada
+Relaciones: 
+  - 1:N con Products (SetNull si se elimina categoría)
+
+PROPIEDADES REQUERIDAS:
+  ✅ Name              [MaxLength: 100]
+  ✅ Description       [MaxLength: 500] ⚠️ REQUIRED (importante!)
+  ✅ CreatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ Image             [MaxLength: 500]
+
+REGLAS DE NEGOCIO:
+  📝 Description es OBLIGATORIO (no puede ser vacío ni null)
+  🏷️  Name debe ser descriptivo
+
+DATOS A CREAR EN SEEDER:
+  - Bebidas (descripción requerida)
+  - Snacks (descripción requerida)
+  - Lácteos (descripción requerida)
+  - Frutas y Verduras (descripción requerida)
+  - Hogar y Limpieza (descripción requerida)
+  - Carnes y Embutidos (descripción requerida)
+
+═══════════════════════════════════════════════════════════════════════════════
+4. PRODUCTS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Products
+Fluent API: ✅ Configurada
+Relaciones: 
+  - N:1 con Category (SetNull) [CategoryId nullable]
+  - 1:N con OrderItems (Restrict)
+
+PROPIEDADES REQUERIDAS:
+  ✅ Name              [MaxLength: 200] [INDEX]
+  ✅ Price             [decimal(10,2)]
+  ✅ Stock             Default: 0
+  ✅ CreatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ Description       [MaxLength: 1000]
+  ⚪ Image             [MaxLength: 500]
+  ⚪ CategoryId        Nullable (SetNull behavior)
+
+REGLAS DE NEGOCIO:
+  💰 Price debe ser > 0
+  📦 Stock puede ser 0 o positivo
+  🏷️  CategoryId puede ser NULL si la categoría se elimina
+
+DATOS A CREAR EN SEEDER:
+  - Mínimo 15 productos
+  - Precios realistas (10.00 - 500.00)
+  - Stock variado (0 - 100)
+  - Relacionar con categorías existentes
+
+═══════════════════════════════════════════════════════════════════════════════
+5. ADDRESSES
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Addresses
+Fluent API: ✅ Configurada (recientemente agregada)
+Relaciones: 
+  - N:1 con User (Cascade)
+
+PROPIEDADES REQUERIDAS:
+  ✅ UserId            [INDEX: IX_Addresses_UserId]
+  ✅ Street            [MaxLength: 200]
+  ✅ City              [MaxLength: 100]
+  ✅ PostalCode        [MaxLength: 20]
+  ✅ Country           [MaxLength: 100]
+  ✅ IsDefault         [INDEX compuesto: UserId_IsDefault]
+  ✅ CreatedAt
+  ✅ UpdatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ Label             [MaxLength: 100]
+  ⚪ State             [MaxLength: 100]
+  ⚪ Phone             [MaxLength: 20]
+
+REGLAS DE NEGOCIO:
+  🏠 Cada usuario puede tener múltiples direcciones
+  ⭐ Solo UNA dirección puede ser IsDefault = true por usuario
+  📍 PostalCode formato libre (4-20 caracteres)
+
+DATOS A CREAR EN SEEDER:
+  - Admin: 1 dirección (default)
+  - Cliente 1: 2 direcciones (1 default, 1 secundaria)
+  - Cliente 2: 1 dirección (default)
+
+═══════════════════════════════════════════════════════════════════════════════
+6. ORDERS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Orders
+Fluent API: ✅ Configurada
+Relaciones: 
+  - N:1 con User (como Customer, Restrict) [INDEX]
+  - 1:N con OrderItems (Cascade)
+  - 1:1 con ShippingAddress (Cascade)
+  - 1:N con OrderStatusHistory (Cascade)
+
+PROPIEDADES REQUERIDAS:
+  ✅ CustomerId        [INDEX: IX_Orders_CustomerId]
+  ✅ CustomerName      [MaxLength: 100]
+  ✅ CustomerEmail     [MaxLength: 255]
+  ✅ ShippingAddress   [MaxLength: 500] (texto simple)
+  ✅ Subtotal          [decimal(18,2)]
+  ✅ Shipping          [decimal(18,2)]
+  ✅ Total             [decimal(18,2)]
+  ✅ Status            [MaxLength: 20] [INDEX] Default: "pending"
+  ✅ PaymentMethod     [MaxLength: 50] Default: "credit_card"
+  ✅ CreatedAt         [INDEX: IX_Orders_CreatedAt]
+  ✅ UpdatedAt
+
+PROPIEDADES OPCIONALES:
+  ⚪ OrderNumber       [MaxLength: 50]
+  ⚪ Tax               [decimal(18,2)] Default: 0
+  ⚪ TrackingNumber    [MaxLength: 100]
+  ⚪ Notes             [MaxLength: 500]
+
+REGLAS DE NEGOCIO:
+  📦 Total = Subtotal + Tax + Shipping
+  📊 Status válidos: "pending", "processing", "delivered", "cancelled"
+  💳 PaymentMethod: "credit_card", "debit_card", "paypal", "cash"
+  🚫 DeleteBehavior.Restrict con Customer (no eliminar usuario con órdenes)
+
+DATOS A CREAR EN SEEDER:
+  - 3 órdenes por cliente (6 total)
+  - Status variados: pending, processing, delivered
+  - Fechas escalonadas
+
+═══════════════════════════════════════════════════════════════════════════════
+7. ORDERITEMS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: OrderItems
+Fluent API: ✅ Configurada
+Relaciones: 
+  - N:1 con Order (Cascade) [INDEX]
+  - N:1 con Product (Restrict) [INDEX]
+
+PROPIEDADES REQUERIDAS:
+  ✅ OrderId           [INDEX: IX_OrderItems_OrderId]
+  ✅ ProductId         [INDEX: IX_OrderItems_ProductId]
+  ✅ ProductName       [MaxLength: 200]
+  ✅ Quantity          [Range: 1, int.MaxValue]
+  ✅ Price             [decimal(18,2)]
+  ✅ Subtotal          [decimal(18,2)]
+
+PROPIEDADES OPCIONALES:
+  ⚪ ProductImage      [MaxLength: 500]
+
+REGLAS DE NEGOCIO:
+  🔢 Quantity DEBE ser >= 1
+  💰 Subtotal = Price × Quantity
+  🚫 Restrict con Product (no eliminar producto con ítems en órdenes)
+  ♻️  Cascade con Order (eliminar ítems si se elimina orden)
+
+DATOS A CREAR EN SEEDER:
+  - 1-4 ítems por orden
+  - Subtotal calculado correctamente
+
+═══════════════════════════════════════════════════════════════════════════════
+8. SHIPPINGADDRESSES
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: ShippingAddresses
+Fluent API: ✅ Configurada
+Relaciones: 
+  - 1:1 con Order (Cascade) [FK: OrderId]
+
+PROPIEDADES REQUERIDAS:
+  ✅ OrderId           [UNIQUE - relación 1:1]
+  ✅ FullName          [MaxLength: 100]
+  ✅ Phone             [MaxLength: 20]
+  ✅ Street            [MaxLength: 200]
+  ✅ City              [MaxLength: 100]
+  ✅ State             [MaxLength: 100]
+  ✅ PostalCode        [MaxLength: 20]
+  ✅ Country           [MaxLength: 100] Default: "México"
+
+REGLAS DE NEGOCIO:
+  🏠 Cada Order DEBE tener UNA ShippingAddress
+  🔒 OrderId único (relación 1:1)
+
+DATOS A CREAR EN SEEDER:
+  - 1 ShippingAddress por cada Order creada (6 total)
+
+═══════════════════════════════════════════════════════════════════════════════
+9. ORDERSTATUSHISTORY
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: OrderStatusHistory
+Fluent API: ✅ Configurada
+Relaciones: 
+  - N:1 con Order (Cascade) [INDEX]
+
+PROPIEDADES REQUERIDAS:
+  ✅ OrderId           [INDEX: IX_OrderStatusHistory_OrderId]
+  ✅ Status            [MaxLength: 20]
+  ✅ Timestamp         Default: DateTime.UtcNow
+
+PROPIEDADES OPCIONALES:
+  ⚪ Note              [MaxLength: 500]
+
+REGLAS DE NEGOCIO:
+  📝 Registra cada cambio de estado de una orden
+  ♻️  Se elimina automáticamente si se elimina la orden (Cascade)
+
+DATOS A CREAR EN SEEDER:
+  - 1-3 estados por orden
+  - Timestamps progresivos
+
+═══════════════════════════════════════════════════════════════════════════════
+10. ACTIVITYLOGS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: ActivityLogs
+Fluent API: ❌ NO configurada explícitamente
+Relaciones: 
+  - N:1 con User (opcional)
+
+PROPIEDADES REQUERIDAS:
+  ✅ Type              [MaxLength: 50] ("order", "product", "user", "category")
+  ✅ Text              [MaxLength: 500]
+  ✅ Timestamp         Default: DateTime.UtcNow
+
+PROPIEDADES OPCIONALES:
+  ⚪ UserId            Nullable
+
+REGLAS DE NEGOCIO:
+  📊 Registra actividades del sistema
+  👤 UserId puede ser NULL (acciones automáticas)
+
+DATOS A CREAR EN SEEDER:
+  - 5-10 logs de actividad
+  - Tipos: order, product, user
+
+═══════════════════════════════════════════════════════════════════════════════
+11. NOTIFICATIONS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: Notifications
+Fluent API: ❌ NO configurada explícitamente
+Relaciones: 
+  - N:1 con User
+
+PROPIEDADES REQUERIDAS:
+  ✅ UserId
+  ✅ Title             [MaxLength: 200]
+  ✅ Message           [MaxLength: 500]
+  ✅ Type              [MaxLength: 50] ("order", "product", "user", "system")
+  ✅ CreatedAt         Default: DateTime.UtcNow
+
+PROPIEDADES OPCIONALES:
+  ⚪ IsRead            Default: false
+
+REGLAS DE NEGOCIO:
+  📬 Cada notificación pertenece a un usuario
+  📖 IsRead para marcar como leída
+
+DATOS A CREAR EN SEEDER:
+  - 2-3 notificaciones por usuario
+  - Tipos variados
+  - Algunas leídas, otras no
+
+═══════════════════════════════════════════════════════════════════════════════
+12. PASSWORDRESETTOKENS
+═══════════════════════════════════════════════════════════════════════════════
+Tabla: PasswordResetTokens
+Fluent API: ✅ Configurada
+Relaciones: 
+  - N:1 con User (Cascade)
+
+PROPIEDADES REQUERIDAS:
+  ✅ UserId
+  ✅ Token             [MaxLength: 255]
+  ✅ ExpiresAt
+  ✅ IsUsed            Default: false
+  ✅ CreatedAt
+
+REGLAS DE NEGOCIO:
+  🔐 Token para reseteo de contraseña
+  ⏰ ExpiresAt valida vigencia
+  ✅ IsUsed para marcar como usado
+
+DATOS A CREAR EN SEEDER:
+  ⚠️  NO crear tokens en seeder (sensible y no necesario)
+
+================================================================================
+🔗 ORDEN DE INSERCIÓN (RESPETANDO DEPENDENCIAS FK)
+================================================================================
+
+NIVEL 1 - SIN DEPENDENCIAS:
+  1. Users
+  2. Categories
+
+NIVEL 2 - DEPENDEN DE NIVEL 1:
+  3. UserPreferences    (requiere Users)
+  4. Products           (requiere Categories - opcional)
+  5. Addresses          (requiere Users)
+
+NIVEL 3 - DEPENDEN DE NIVEL 1-2:
+  6. Orders             (requiere Users como CustomerId)
+
+NIVEL 4 - DEPENDEN DE NIVEL 3:
+  7. OrderItems         (requiere Orders + Products)
+  8. ShippingAddresses  (requiere Orders - 1:1)
+  9. OrderStatusHistory (requiere Orders)
+  10. Notifications     (requiere Users)
+  11. ActivityLogs      (requiere Users - opcional)
+
+NO CREAR:
+  ❌ PasswordResetTokens (no necesario en seeder)
+  ❌ Productos (tabla legacy)
+
+================================================================================
+⚠️ RESTRICCIONES CRÍTICAS A RESPETAR
+================================================================================
+
+🚫 DELETE BEHAVIOR:
+  - Products → Category:        SetNull (CategoryId puede quedar NULL)
+  - Orders → Customer (User):   Restrict (NO eliminar usuarios con órdenes)
+  - OrderItems → Product:       Restrict (NO eliminar productos en órdenes)
+  - OrderItems → Order:         Cascade (eliminar items con orden)
+  - ShippingAddress → Order:    Cascade (eliminar con orden)
+  - OrderStatusHistory → Order: Cascade (eliminar con orden)
+  - UserPreferences → User:     Cascade (eliminar con usuario)
+  - Addresses → User:           Cascade (eliminar con usuario)
+
+🔒 ÍNDICES ÚNICOS:
+  - Users.Email                 DEBE ser único
+  - UserPreferences.UserId      DEBE ser único (1:1)
+
+📏 MAXLENGTH:
+  - Respetar todos los MaxLength definidos
+  - Especial atención en Email (150), Name (150)
+
+💰 DECIMALES:
+  - Products.Price:      decimal(10,2)
+  - Order.Subtotal:      decimal(18,2)
+  - Order.Tax:           decimal(18,2)
+  - Order.Shipping:      decimal(18,2)
+  - Order.Total:         decimal(18,2)
+  - OrderItem.Price:     decimal(18,2)
+  - OrderItem.Subtotal:  decimal(18,2)
+
+🔢 VALIDACIONES:
+  - OrderItem.Quantity >= 1
+  - Products.Stock >= 0
+  - Subtotales calculados correctamente
+
+================================================================================
+✅ VALIDACIÓN ANTI-DUPLICADO
+================================================================================
+
+IMPLEMENTAR EN SEEDER:
+
+if (!context.Users.Any())
+{
+    // Crear usuarios
+}
+
+if (!context.UserPreferences.Any())
+{
+    // Crear preferencias
+}
+
+if (!context.Categories.Any())
+{
+    // Crear categorías
+}
+
+if (!context.Products.Any())
+{
+    // Crear productos
+}
+
+if (!context.Addresses.Any())
+{
+    // Crear direcciones
+}
+
+if (!context.Orders.Any())
+{
+    // Crear órdenes
+}
+
+if (!context.OrderItems.Any())
+{
+    // Crear items
+}
+
+if (!context.ShippingAddresses.Any())
+{
+    // Crear shipping addresses
+}
+
+if (!context.OrderStatusHistory.Any())
+{
+    // Crear historial
+}
+
+if (!context.Notifications.Any())
+{
+    // Crear notificaciones
+}
+
+if (!context.ActivityLogs.Any())
+{
+    // Crear logs
+}
+
+================================================================================
+📦 DEPENDENCIAS EXTERNAS NECESARIAS
+================================================================================
+
+✅ BCrypt.Net-Next (para hashear contraseñas)
+   NuGet: BCrypt.Net-Next
+   Uso: BCrypt.Net.BCrypt.HashPassword("password")
+
+================================================================================
+🎯 DATOS A CREAR EN SEEDER - RESUMEN
+================================================================================
+
+USUARIOS:
+  ✅ 1 Admin: admin@bosko.com
+  ✅ 2 Clientes: cliente1@bosko.com, cliente2@bosko.com
+
+PREFERENCIAS:
+  ✅ 3 UserPreferences (1 por usuario)
+
+CATEGORÍAS:
+  ✅ 6 categorías con descripción obligatoria
+
+PRODUCTOS:
+  ✅ 18 productos (3 por categoría)
+
+DIRECCIONES:
+  ✅ 4 direcciones totales
+     - Admin: 1 default
+     - Cliente1: 2 (1 default)
+     - Cliente2: 1 default
+
+ÓRDENES:
+  ✅ 6 órdenes (3 por cliente)
+     - Status variados: pending, processing, delivered
+
+ORDER ITEMS:
+  ✅ 12-18 items (2-3 por orden)
+
+SHIPPING ADDRESSES:
+  ✅ 6 shipping addresses (1 por orden - obligatorio)
+
+ORDER STATUS HISTORY:
+  ✅ 12-18 registros de historial (2-3 por orden)
+
+NOTIFICATIONS:
+  ✅ 6-9 notificaciones (2-3 por usuario)
+
+ACTIVITY LOGS:
+  ✅ 8-12 logs de actividad
+
+================================================================================
+✅ CONCLUSIÓN DEL ANÁLISIS
+================================================================================
+
+🟢 ESTADO: TODO LISTO PARA GENERAR DATABASESEEDER
+
+✅ Todas las entidades analizadas
+✅ Todas las restricciones identificadas
+✅ Orden de inserción definido
+✅ Datos realistas planeados
+✅ Validación anti-duplicado planeada
+✅ DeleteBehavior respetado
+✅ Índices únicos identificados
+✅ MaxLength respetado
+✅ Decimales configurados
+✅ Relaciones 1:1, 1:N, N:1 identificadas
+
+⚠️  CONSIDERACIONES:
+  - NO crear PasswordResetTokens (innecesario)
+  - NO crear Productos (tabla legacy)
+  - ActivityLogs y Notifications NO tienen Fluent API explícita
+    (usar DataAnnotations del modelo)
+
+🚀 SIGUIENTE PASO:
+   Generar archivo Data/DatabaseSeeder.cs
+
+================================================================================
+FIN DEL ANÁLISIS
+================================================================================
