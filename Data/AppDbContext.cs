@@ -452,10 +452,11 @@ namespace DBTest_BACK.Data
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired();
                 
-                // Relación con User
+                // Relación con User - Configuración explícita para evitar shadow properties
                 entity.HasOne(e => e.User)
-                    .WithMany()
+                    .WithMany(u => u.Addresses)  // Asegurar navegación inversa
                     .HasForeignKey(e => e.UserId)
+                    .HasPrincipalKey(u => u.Id)
                     .OnDelete(DeleteBehavior.Cascade);
                 
                 // Índices

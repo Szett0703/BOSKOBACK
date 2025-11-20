@@ -193,6 +193,12 @@ using (var scope = app.Services.CreateScope())
         await DBTest_BACK.Seeding.DatabaseSeeder.SeedAsync(db);
         Console.WriteLine("[SEED] ✅ Database seeded successfully!");
     }
+    catch (Npgsql.NpgsqlException ex) when (ex.Message.Contains("Failed to connect"))
+    {
+        Console.WriteLine("[WARNING] ⚠️  No se pudo conectar a la base de datos. Saltando migraciones y seeder.");
+        Console.WriteLine("[WARNING] Asegúrate de que la variable de entorno ConnectionStrings__DefaultConnection esté configurada en Railway.");
+        Console.WriteLine($"[WARNING] Detalles: {ex.Message}");
+    }
     catch (Exception ex)
     {
         Console.WriteLine($"[ERROR] ❌ Error during migrations or seeding: {ex.Message}");
