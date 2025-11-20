@@ -22,18 +22,27 @@ Console.WriteLine($"🚀 Server will listen on: http://0.0.0.0:{port}");
 // 🔌 CONNECTION STRING (LOCAL + RAILWAY)
 // ============================================
 
-// Primero intenta obtener la variable de entorno de Railway
-var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+// Railway sometimes exposes env vars with _ or with __
+// So we check BOTH to avoid issues.
+var envConn1 = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+var envConn2 = Environment.GetEnvironmentVariable("ConnectionStrings_DefaultConnection");
 
-// Si no existe, usa la conexión local de appsettings.json
-if (string.IsNullOrEmpty(connectionString))
+string connectionString;
+
+if (!string.IsNullOrEmpty(envConn1))
 {
-    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    Console.WriteLine("🔌 Using LOCAL Database Connection");
+    connectionString = envConn1;
+    Console.WriteLine("🔌 Using RAILWAY Database Connection (double __)");
+}
+else if (!string.IsNullOrEmpty(envConn2))
+{
+    connectionString = envConn2;
+    Console.WriteLine("🔌 Using RAILWAY Database Connection (single _)");
 }
 else
 {
-    Console.WriteLine("🔌 Using RAILWAY Database Connection");
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    Console.WriteLine("🔌 Using LOCAL Database Connection");
 }
 
 Console.WriteLine($"ConnectionString: {connectionString}");
