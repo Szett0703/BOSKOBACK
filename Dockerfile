@@ -19,9 +19,11 @@ WORKDIR /app
 # Copiar archivos publicados
 COPY --from=build /app/publish .
 
-# Railway SIEMPRE usa el puerto 8080 internamente
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+# Railway usa PUERTOS DINÁMICOS ($PORT)
+ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
 
+# Exponer un puerto estándar
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "DBTest_BACK.dll"]
+# Ejecutar la API - ESTE ES EL NOMBRE CORRECTO DEL DLL
+ENTRYPOINT ["dotnet", "DBTest-BACK.dll"]
