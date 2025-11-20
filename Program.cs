@@ -10,6 +10,15 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================
+// 🚀 RAILWAY PORT CONFIGURATION
+// ============================================
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+Console.WriteLine($"🚀 Server will listen on: http://0.0.0.0:{port}");
+
+// ============================================
 // 🔌 CONNECTION STRING (LOCAL + RENDER + RAILWAY)
 // ============================================
 
@@ -161,7 +170,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 // MIDDLEWARE
 // ============================================
 
-app.UseHttpsRedirection();
+// HTTPS redirection DISABLED for Railway (Railway handles HTTPS externally)
+// app.UseHttpsRedirection();
+
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -171,5 +182,7 @@ app.MapControllers();
 // Health status
 app.MapGet("/health", () => new { status = "healthy", environment = app.Environment.EnvironmentName })
     .AllowAnonymous();
+
+Console.WriteLine($"✅ Bosko API running on port {port}");
 
 app.Run();
